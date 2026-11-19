@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b7a75">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Let Us PDF"><meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -211,7 +211,9 @@ button,input,select{font:inherit;color:inherit}
 #fnList small{color:var(--muted)}
 /* touch screens (phones, tablets): bigger targets, no page-level pinch, safe areas, no zoom-on-focus */
 @media (pointer:coarse){
-  html,body{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:pan-x pan-y;-webkit-tap-highlight-color:transparent}
+  /* the page itself never scrolls or zooms: only the document area does, so the bars stay put */
+  html,body{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:pan-x pan-y;-webkit-tap-highlight-color:transparent}
+  #app{height:100%;max-height:100dvh}
   .btn{height:40px;min-width:40px}.btn.icon{width:40px}
   #tools .btn{padding:0 11px}
   .inp,input,select,textarea{font-size:16px}
@@ -231,7 +233,6 @@ button,input,select{font:inherit;color:inherit}
   .themesel{margin-left:8px}
 }
 .ioshint{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);font-size:14px}
-@media (display-mode:standalone){#app{min-height:100vh}}
 </style>
 
 </head><body>

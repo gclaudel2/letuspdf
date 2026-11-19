@@ -3317,6 +3317,10 @@ $('#bCopyPg').onclick=()=>copyPagesToClip();
 $('#bPastePg').onclick=()=>pastePages();
 
 /* ---------- touch screens: pinch to zoom ---------- */
+/* iOS Safari zooms the whole page on pinch (and on double-tap) whatever the viewport says: cancel it,
+   the document is zoomed by the handler below and the bars never move */
+for(const t of ['gesturestart','gesturechange','gestureend'])document.addEventListener(t,e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
 (function(){
   let d0=0,z0=1,on=false;
   const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)||1;
