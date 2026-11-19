@@ -1574,11 +1574,11 @@ function onTlClick(pg,e){
 }
 
 /* highlight from text selection */
-function highlightSelection(){
+function highlightSelection(rng){
   if(S.tool!=='hl')return;
   setTimeout(()=>{
-    const sel=getSelection();if(!sel||sel.isCollapsed||!sel.rangeCount)return;
-    const rects=[...sel.getRangeAt(0).getClientRects()];
+    const sel=getSelection();if(!rng&&(!sel||sel.isCollapsed||!sel.rangeCount))return;
+    const rects=[...(rng||sel.getRangeAt(0)).getClientRects()];
     const boxes=[];
     for(const r of rects){
       if(r.width<1||r.height<2)continue;
@@ -1600,16 +1600,54 @@ function highlightSelection(){
       const a={id:uid(),type:'hl',n:m.n,x:m.x,y:m.y,w:m.w,h:m.h,color:S.def.hl.color};
       S.annots.push(a);renderOne(a);
     }
-    sel.removeAllRanges();pushHist();
+    if(sel)sel.removeAllRanges();pushHist();
   },10);
 }
-document.addEventListener('pointerup',highlightSelection);
+document.addEventListener('pointerup',()=>highlightSelection());
 /* touch screens: the selection is finished with the handles (no pointerup afterwards), so wait until it settles */
 let selT=0;
 document.addEventListener('selectionchange',()=>{
   if(!COARSE||S.tool!=='hl')return;
   clearTimeout(selT);selT=setTimeout(()=>{const sel=getSelection();if(sel&&!sel.isCollapsed)highlightSelection()},700);
 });
+/* touch highlighter: long-press on text, then drag to extend (own selection, native iOS selection is disabled in this tool) */
+if(COARSE){
+  const cfp=(x,y)=>{if(document.caretRangeFromPoint)return document.caretRangeFromPoint(x,y);const p=document.caretPositionFromPoint&&document.caretPositionFromPoint(x,y);if(!p)return null;const r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);return r};
+  const inText=n=>n&&n.nodeType===3&&n.parentElement&&n.parentElement.closest('.tl');
+  const wordStart=(n,o)=>{const t=n.nodeValue;while(o>0&&!/\s/.test(t[o-1]))o--;return o};
+  const wordEnd=(n,o)=>{const t=n.nodeValue;while(o<t.length&&!/\s/.test(t[o]))o++;return o};
+  let timer=0,act=false,a0=null,x0=0,y0=0,prev=[];
+  const clearPrev=()=>{prev.forEach(e=>e.remove());prev=[]};
+  const build=(ra,rb)=>{
+    if(!ra||!rb||!inText(ra.startContainer)||!inText(rb.startContainer))return null;
+    const r=document.createRange();
+    const cmp=ra.startContainer===rb.startContainer?ra.startOffset-rb.startOffset:(ra.compareBoundaryPoints?ra.compareBoundaryPoints(Range.START_TO_START,rb):0);
+    const first=cmp<=0?ra:rb,last=cmp<=0?rb:ra;
+    r.setStart(first.startContainer,wordStart(first.startContainer,first.startOffset));
+    r.setEnd(last.startContainer,wordEnd(last.startContainer,last.startOffset));
+    return r;
+  };
+  const show=r=>{clearPrev();if(!r)return;for(const q of r.getClientRects()){if(q.width<1)continue;const d=document.createElement('div');d.className='hlprev';d.style.cssText='left:'+q.left+'px;top:'+q.top+'px;width:'+q.width+'px;height:'+q.height+'px';document.body.appendChild(d);prev.push(d)}};
+  document.addEventListener('touchstart',e=>{
+    if(S.tool!=='hl'||e.touches.length!==1){clearTimeout(timer);return}
+    const t=e.touches[0];if(!document.elementFromPoint(t.clientX,t.clientY)?.closest('.page'))return;
+    x0=t.clientX;y0=t.clientY;act=false;clearTimeout(timer);
+    timer=setTimeout(()=>{const r=cfp(x0,y0);if(r&&inText(r.startContainer)){act=true;a0=r;show(build(a0,a0));navigator.vibrate&&navigator.vibrate(15)}},320);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    if(!act){if(Math.hypot(t.clientX-x0,t.clientY-y0)>8)clearTimeout(timer);return}
+    e.preventDefault();
+    const r=cfp(t.clientX,t.clientY);if(r)show(build(a0,r));
+  },{passive:false});
+  const end=e=>{
+    clearTimeout(timer);
+    if(!act)return;act=false;
+    const t=e.changedTouches&&e.changedTouches[0];const r=t&&cfp(t.clientX,t.clientY);
+    const rg=build(a0,r||a0);clearPrev();if(rg)highlightSelection(rg);
+  };
+  document.addEventListener('touchend',end);document.addEventListener('touchcancel',()=>{clearTimeout(timer);act=false;clearPrev()});
+}
 
 /* ---------- fonts: detection, matching, import ---------- */
 let fontSeq=0;
@@ -2148,9 +2186,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#spMenu').hidde
 
 /* ---------- floating properties bar ---------- */
 const TOOL_HINT={
-  edit:'Cliquez sur un texte du document pour le modifier. Échap pour valider.',
+  edit:'Touchez un texte du document pour le modifier.',
   text:'Cliquez sur la page à l\'endroit où ajouter du texte.',
-  hl:'Sélectionnez du texte à la souris pour le surligner.',
+  hl:'Touchez longuement un mot puis glissez pour surligner.',
   rect:'Faites glisser sur la page pour dessiner un rectangle.',
   pen:'Dessinez à main levée sur la page.',
   shot:'Faites glisser sur la page pour capturer une zone en image.',
@@ -3385,7 +3423,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v6';
+  const APP_VER='v7';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3393,8 +3431,25 @@ if(PWA){
   $('#mVer').textContent=APP_VER;
   /* iOS keyboard: it overlays the fixed layout, so lift floating panels above it */
   const vv=window.visualViewport;
-  if(vv){const kbSync=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));root.style.setProperty('--kb',kb+'px');root.classList.toggle('kb',kb>80);if(kb>80&&(window.scrollY||vv.offsetTop))window.scrollTo(0,0)};
-    vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync);kbSync()}
+  const isEd=e=>e&&(e.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName))&&!e.closest('#modal,#modal2,#modal3,#modal4,#msheet');
+  const kbSync=()=>{
+    const hh=$('#mhead').getBoundingClientRect().bottom;root.style.setProperty('--hh',Math.round(hh)+'px');
+    const kb=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
+    root.style.setProperty('--kb',kb+'px');
+    root.classList.toggle('kb',kb>80||isEd(document.activeElement));
+    if(kb>80&&(window.scrollY||vv.offsetTop))window.scrollTo(0,0);
+  };
+  if(vv){vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync)}
+  document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
+  document.addEventListener('focusout',()=>setTimeout(kbSync,150));
+  /* keep the text being edited visible between the floating tool panel (top) and the keyboard */
+  function revealEdit(){
+    const el=document.activeElement;if(!el||!el.isContentEditable)return;
+    const pb=$('#propbar'),top=(pb&&!pb.hidden?pb.getBoundingClientRect().bottom:$('#mhead').getBoundingClientRect().bottom)+10;
+    const bot=(vv?vv.offsetTop+vv.height:innerHeight)-60,r=el.getBoundingClientRect(),v=$('#viewer');
+    if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
+  }
+  kbSync();
   const q=sel=>document.querySelector(sel);
   const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
   $('#mSave').onclick=()=>click('#bSave');
