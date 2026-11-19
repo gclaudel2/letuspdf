@@ -2419,6 +2419,7 @@ async function saveAs(){
       /* falls through to the name-only flow below */
     }
   }
+  if(PWA&&COARSE){savePdf();return} /* the phone's save dialog already asks for the name and the place */
   const name=await askName(S.saveName||(S.name.replace(/-modifie$/,'')+'-modifie'));
   if(name)savePdf(name);
 }
@@ -2935,15 +2936,31 @@ const desktopDL={async save({filename,data}){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
 }};
 /* phone / tablet: the share sheet is the way to put a file in "Files", Drive, Mail, WhatsApp... */
-const mobileDL={share:true,async save({filename,data}){
-  const type=data.type||'application/octet-stream';
-  const file=new File([data],filename,{type});
-  if(COARSE&&navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({files:[file],title:filename.replace(/\.[a-z0-9]+$/i,'')});return}
-    catch(e){if(e&&e.name==='AbortError'){const d=new Error('declined');d.code='declined';throw d}console.warn('share failed, plain download instead',e)}
-  }
-  const a=document.createElement('a');a.href=URL.createObjectURL(data);a.download=filename;document.body.append(a);a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+const mobileDL={share:true,save({filename,data}){
+  const dl=(name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(data);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)};
+  if(!COARSE){dl(filename);return Promise.resolve()}
+  /* phone: a small dialog, so that the share sheet opens from a fresh tap (iOS refuses it otherwise) and
+     the person can rename the file; the sheet's "Enregistrer dans Fichiers" lets them pick the folder */
+  return new Promise((res,rej)=>{
+    const base=filename.replace(/\.pdf$/i,'');
+    const ov=document.createElement('div');ov.id='modal';ov.style.zIndex=70;
+    const mb=(data.size/1048576).toFixed(data.size>1048576*10?0:1);
+    ov.innerHTML='<div class="box savebox"><h2>Enregistrer le fichier</h2><input class="inp" id="svName" aria-label="Nom du fichier" autocapitalize="off" autocomplete="off" spellcheck="false"><small>'+mb+' Mo · PDF</small><div class="row"><button class="btn primary" id="svShare">Choisir l\u2019emplacement…</button></div><div class="row"><button class="btn" id="svDl">Télécharger</button><button class="btn" id="svNo">Annuler</button></div><small>« Choisir l\u2019emplacement » ouvre le menu du téléphone : choisissez <b>Enregistrer dans Fichiers</b> (iPhone) ou votre application de stockage (Android).</small></div>';
+    document.body.append(ov);
+    const inp=ov.querySelector('#svName');inp.value=base;
+    const nm=()=>(inp.value.trim().replace(/[\\/:*?"<>|]+/g,'-')||base).replace(/\.pdf$/i,'')+'.pdf';
+    const close=()=>ov.remove();
+    ov.querySelector('#svNo').onclick=()=>{close();const e=new Error('declined');e.code='declined';rej(e)};
+    ov.querySelector('#svDl').onclick=()=>{dl(nm());close();res()};
+    ov.querySelector('#svShare').onclick=async()=>{
+      const file=new File([data],nm(),{type:'application/pdf'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file]});close();res();return}
+        catch(e){if(e&&e.name==='AbortError')return;console.warn('share failed',e)}
+      }
+      dl(nm());close();res();
+    };
+  });
 }};
 (async()=>{try{if(window.claude&&window.claude.use)DL=await window.claude.use('downloads')}catch(e){}if(!DL&&DESKTOP)DL=desktopDL;if(!DL&&PWA)DL=mobileDL})();
 
@@ -3364,5 +3381,80 @@ if(PWA){
       document.body.append(d);
     }
   }catch(e){}
+}
+
+/* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
+if(PWA){
+  const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
+  const setPhone=()=>root.classList.toggle('phone',mq.matches);
+  setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
+  $$('#mhead [data-i],#mbar [data-i]').forEach(e=>{e.innerHTML=ICONS[e.dataset.i]||''});
+  const q=sel=>document.querySelector(sel);
+  const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
+  $('#mUndo').onclick=()=>click('#bUndo');$('#mRedo').onclick=()=>click('#bRedo');$('#mSave').onclick=()=>click('#bSave');
+  $$('#mbar [data-mt]').forEach(b=>b.onclick=()=>click('[data-tool="'+b.dataset.mt+'"]'));
+  /* sheet content: [icon, label, selector of the existing control, keep the sheet open] */
+  const TABS={
+    'Outils':[['edit','Modifier le texte','[data-tool="edit"]'],['image','Image','[data-tool="image"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
+    'Pages':[['blank','Page vide','#bBlank'],['rotl','Pivoter à gauche','#bRotL',1],['rotr','Pivoter à droite','#bRotR',1],['mvup','Monter','#bMvUp',1],['mvdn','Descendre','#bMvDn',1],['dup','Copier','#bCopyPg',1],['paste','Coller','#bPastePg'],['trash','Supprimer','#bDelPg'],['sidebar','Miniatures','#bThumbs']],
+    'Fichier':[['open','Ouvrir un PDF','#bOpen2'],['merge','Fusionner','#bMerge'],['saveas','Enregistrer sous','#bSaveAs'],['special','Partager / envoyer','[data-sp="email"]'],['special','Invoice → CN','[data-sp="cn"]']],
+    'Affichage':[]
+  };
+  let tab='Outils',sheetOpen=false;
+  const sheet=$('#msheet');
+  const close=()=>{sheet.hidden=true;sheetOpen=false};
+  const toolOn=sel=>{const e=q(sel);return !!(e&&e.classList.contains('on'))};
+  function drawSheet(){
+    $('#mTabs').innerHTML=Object.keys(TABS).map(t=>'<button data-t="'+t+'"'+(t===tab?' class="on"':'')+'>'+t+'</button>').join('');
+    const body=$('#mBody');
+    if(tab==='Affichage'){
+      body.innerHTML='<div class="mzoom"><button class="btn" id="zM" aria-label="Zoom arrière">'+ICONS.minus+'</button><span class="zl" id="zL"></span><button class="btn" id="zP" aria-label="Zoom avant">'+ICONS.plus+'</button></div>'
+        +'<div class="mgrid"><button id="zFit">'+ICONS.doc+'Ajuster à la page</button><button id="zSea">'+ICONS.search+'Rechercher</button></div>'
+        +'<div class="mrow"><label for="mPg">Aller à la page</label><input class="inp num" id="mPg" inputmode="numeric" style="width:84px"><span class="lbl" id="mPgT"></span></div>'
+        +'<div class="mrow"><label for="mTh">Thème</label><select class="inp" id="mTh"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>';
+      $('#zM').onclick=()=>click('#bZout');$('#zP').onclick=()=>click('#bZin');
+      $('#zFit').onclick=()=>{click('#bFitP')};$('#zSea').onclick=()=>{close();click('#bSearch')};
+      const pg=$('#mPg');pg.value=$('#pgIn').value;$('#mPgT').textContent=$('#pgTot').textContent;
+      pg.onchange=()=>{const t=$('#pgIn');t.value=pg.value;t.dispatchEvent(new Event('change',{bubbles:true}));t.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))};
+      const th=$('#mTh');th.value=$('#themeSel').value;th.onchange=()=>{const t=$('#themeSel');t.value=th.value;t.dispatchEvent(new Event('change',{bubbles:true}))};
+      syncSheet();return;
+    }
+    body.innerHTML='<div class="mgrid">'+TABS[tab].map((it,i)=>'<button data-i2="'+i+'">'+(ICONS[it[0]]||'')+it[1]+'</button>').join('')+'</div>';
+    syncSheet();
+  }
+  function syncSheet(){
+    if(!sheetOpen)return;
+    if(tab==='Affichage'){const z=$('#zL');if(z)z.textContent=$('#zLbl').textContent;return}
+    $$('#mBody [data-i2]').forEach(b=>{
+      const it=TABS[tab][+b.dataset.i2],e=q(it[2]);
+      b.disabled=!e||e.disabled;b.classList.toggle('on',it[2].indexOf('data-tool')>0&&toolOn(it[2]));
+    });
+  }
+  $('#mTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.t;drawSheet()});
+  $('#mBody').addEventListener('click',e=>{
+    const b=e.target.closest('[data-i2]');if(!b)return;
+    const it=TABS[tab][+b.dataset.i2];if(!it[3])close();
+    click(it[2]);setTimeout(syncSheet,80);
+  });
+  const open=t=>{tab=t||tab;sheetOpen=true;sheet.hidden=false;drawSheet()};
+  $('#mMore').onclick=()=>open('Outils');
+  $('#mTitleBtn').onclick=()=>open('Pages');
+  sheet.querySelector('.mback').onclick=close;
+  /* swipe the sheet down to close */
+  let y0=null;const pnl=sheet.querySelector('.mpanel');
+  pnl.addEventListener('touchstart',e=>{if(e.target.closest('#mBody')&&$('#mBody').scrollTop>0)return;y0=e.touches[0].clientY},{passive:true});
+  pnl.addEventListener('touchend',e=>{if(y0!==null&&e.changedTouches[0].clientY-y0>70)close();y0=null},{passive:true});
+  /* keep header / bar in step with the (hidden) desktop controls */
+  setInterval(()=>{
+    if(!root.classList.contains('phone'))return;
+    const on=t=>toolOn('[data-tool="'+t+'"]');
+    $$('#mbar [data-mt]').forEach(b=>b.classList.toggle('on',on(b.dataset.mt)));
+    const more=!['sel','text','hl','pen'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
+    for(const [a,b2] of [['#mUndo','#bUndo'],['#mRedo','#bRedo'],['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
+    const has=S.pdf;
+    $('#mTitle').textContent=has?(S.name||'Document')+(S.dirty?' •':''):'Let Us PDF';
+    $('#mSub').textContent=has?'Page '+$('#pgIn').value+' '+$('#pgTot').textContent:'Aucun document ouvert';
+    syncSheet();
+  },250);
 }
 })();

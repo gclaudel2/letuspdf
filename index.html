@@ -232,11 +232,59 @@ button,input,select{font:inherit;color:inherit}
   .brand span{display:none}
   .themesel{margin-left:8px}
 }
+
+/* ---------- phone layout (installed web app on a small touch screen) ---------- */
+#mhead,#mbar,#msheet{display:none}
+html.phone #topbar,html.phone #tools{display:none!important}
+html.phone #mhead{display:flex;align-items:center;gap:6px;padding:max(8px,env(safe-area-inset-top)) 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+html.phone #mhead .mtitle{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
+html.phone #mhead .mtitle b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600}
+html.phone #mhead .mtitle small{color:var(--muted);font-size:12px}
+html.phone #mhead .btn{height:42px}
+html.phone #mSave{padding:0 14px}
+html.phone body{margin:0}
+html.phone #app{box-sizing:border-box;height:100%;max-height:none;padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+html.phone #mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding:4px 6px calc(4px + env(safe-area-inset-bottom));gap:2px}
+html.phone #mbar .mt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:54px;border:0;border-radius:12px;background:none;color:var(--muted);font:500 11px/1.1 var(--font);padding:0}
+html.phone #mbar .mt svg,html.phone .mgrid svg,html.phone .mzoom svg{stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+html.phone #mbar .mt svg{width:23px;height:23px}
+html.phone .ioshint{z-index:35}
+html.phone #mbar .mt.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent)}
+html.phone #mbar .mt:active{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+html.phone .ioshint{bottom:calc(76px + env(safe-area-inset-bottom))}
+html.phone #msheet{display:block;position:fixed;inset:0;z-index:40}
+html.phone #msheet[hidden]{display:none}
+html.phone .mback{position:absolute;inset:0;background:rgba(10,14,22,.45)}
+html.phone .mpanel{position:absolute;left:0;right:0;bottom:0;max-height:78dvh;display:flex;flex-direction:column;background:var(--panel2);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding-bottom:env(safe-area-inset-bottom)}
+html.phone .mgrip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 4px;flex:none}
+html.phone .mtabs{display:flex;gap:4px;padding:4px 12px 8px;flex:none}
+html.phone .mtabs button{flex:1;height:38px;border:0;border-radius:10px;background:none;color:var(--muted);font:600 14px var(--font)}
+html.phone .mtabs button.on{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+html.phone #mBody{overflow:auto;padding:4px 12px 14px;-webkit-overflow-scrolling:touch}
+html.phone .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+html.phone .mgrid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:76px;padding:8px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--fg);font:500 13px/1.2 var(--font);text-align:center}
+html.phone .mgrid button svg{width:24px;height:24px}
+html.phone .mgrid button:disabled{opacity:.38}
+html.phone .mgrid button.on{border-color:var(--accent);color:var(--accent)}
+html.phone .mgrid button:active{background:color-mix(in srgb,var(--accent) 14%,var(--panel))}
+html.phone .mrow{display:flex;align-items:center;gap:10px;margin:10px 0 2px}
+html.phone .mrow label{flex:1;color:var(--muted);font-size:13px}
+html.phone .mrow .inp{height:42px}
+html.phone .mzoom{display:flex;align-items:center;gap:8px;margin:10px 0}
+html.phone .mzoom .zl{flex:1;text-align:center;font-weight:600}
+html.phone .mzoom .btn{height:46px;min-width:56px}
+.savebox .row{display:flex;gap:8px;flex-wrap:wrap}.savebox .btn{flex:1;min-height:46px;justify-content:center}.savebox small{color:var(--muted);line-height:1.4}
 .ioshint{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);font-size:14px}
 </style>
 
 </head><body>
 <div id="app">
+  <header id="mhead" aria-label="Document">
+    <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><b id="mTitle">Let Us PDF</b><small id="mSub"></small></button>
+    <button class="btn icon" id="mUndo" aria-label="Annuler" data-i="undo" disabled></button>
+    <button class="btn icon" id="mRedo" aria-label="Rétablir" data-i="redo" disabled></button>
+    <button class="btn primary" id="mSave" disabled><span data-i="save"></span>Enregistrer</button>
+  </header>
   <div class="bar" id="topbar">
     <div class="brand"><i data-i="doc"></i><span>Let Us PDF</span></div>
     <button class="btn" id="bOpen" aria-haspopup="menu"><span data-i="open"></span>Ouvrir<span data-i="chev"></span></button>
@@ -360,6 +408,14 @@ button,input,select{font:inherit;color:inherit}
     <button class="btn icon" id="shotClose" data-i="x" title="Fermer"></button>
   </div>
 </div>
+  <nav id="mbar" aria-label="Outils">
+    <button class="mt" data-mt="sel"><span data-i="cursor"></span>Lecture</button>
+    <button class="mt" data-mt="text"><span data-i="type"></span>Texte</button>
+    <button class="mt" data-mt="hl"><span data-i="hl"></span>Surligner</button>
+    <button class="mt" data-mt="pen"><span data-i="pen"></span>Stylo</button>
+    <button class="mt" id="mMore"><span data-i="special"></span>Plus</button>
+  </nav>
+  <div id="msheet" hidden><div class="mback"></div><div class="mpanel" role="dialog" aria-label="Menu"><div class="mgrip"></div><div class="mtabs" id="mTabs"></div><div id="mBody"></div></div></div>
 <div id="toast" hidden></div>
 <div id="modal" hidden><div class="box">
   <h2>Document protégé</h2>
