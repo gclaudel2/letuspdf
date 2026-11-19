@@ -3385,10 +3385,16 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
+  const APP_VER='v6';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
   $$('#mhead [data-i],#mbar [data-i]').forEach(e=>{e.innerHTML=ICONS[e.dataset.i]||''});
+  $('#mVer').textContent=APP_VER;
+  /* iOS keyboard: it overlays the fixed layout, so lift floating panels above it */
+  const vv=window.visualViewport;
+  if(vv){const kbSync=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));root.style.setProperty('--kb',kb+'px');root.classList.toggle('kb',kb>80);if(kb>80&&(window.scrollY||vv.offsetTop))window.scrollTo(0,0)};
+    vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync);kbSync()}
   const q=sel=>document.querySelector(sel);
   const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
   $('#mSave').onclick=()=>click('#bSave');

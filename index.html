@@ -238,6 +238,12 @@ button,input,select{font:inherit;color:inherit}
 html.phone #topbar,html.phone #tools{display:none!important}
 html.phone #mhead{display:flex;align-items:center;gap:6px;padding:max(8px,env(safe-area-inset-top)) 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
 html.phone #mhead .mtitle svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;color:var(--accent)}
+html.phone #mhead .mtt{display:flex;flex-direction:column;min-width:0;align-items:flex-start}
+html.phone #mhead .mtt i{font:normal 500 9px/1 var(--font);color:var(--muted);margin-top:2px;letter-spacing:.3px}
+html.phone.kb #mbar,html.phone.kb .ioshint{display:none!important}
+html.phone.kb #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;bottom:calc(var(--kb,0px) + 8px)!important;z-index:45}
+html.phone.kb #search,html.phone.kb #search2{bottom:var(--kb,0px)!important;max-height:40dvh}
+html.phone.kb #toast{bottom:auto;top:max(70px,calc(env(safe-area-inset-top) + 64px))}
 html.phone #mhead .mpg{flex:none;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:color-mix(in srgb,var(--fg) 6%,transparent);color:var(--fg);font:600 13px var(--font)}
 html.phone #mhead .mtitle{flex-direction:row!important;align-items:center!important;gap:8px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
 html.phone #mhead .mtitle b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600}
@@ -282,7 +288,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
 </head><body>
 <div id="app">
   <header id="mhead" aria-label="Document">
-    <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><span data-i="doc"></span><b id="mTitle">Let Us PDF</b></button>
+    <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><span data-i="doc"></span><span class="mtt"><b id="mTitle">Let Us PDF</b><i id="mVer"></i></span></button>
     <button class="mpg" id="mPgBtn" aria-label="Aller à la page"><span id="mSub"></span></button>
     <button class="btn primary" id="mSave" disabled aria-label="Enregistrer"><span data-i="save"></span>Enregistrer</button>
   </header>
