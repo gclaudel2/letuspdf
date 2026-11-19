@@ -1,0 +1,21 @@
+Let Us PDF - version web installable (PWA)
+
+PUBLIER SUR GITHUB PAGES (gratuit)
+1. Sur github.com, creez un depot public, par exemple "letuspdf".
+2. Deposez TOUT le contenu de ce dossier a la racine du depot (index.html, app.js, lib/, icons/, sw.js,
+   manifest.webmanifest, .nojekyll, favicon32.png). Bouton "Add file > Upload files".
+   Le fichier ".nojekyll" est cache : s'il manque, ajoutez un fichier vide de ce nom.
+3. Settings > Pages > "Deploy from a branch" > branche main, dossier / (root) > Save.
+4. Apres 1 a 2 minutes l'appli est a : https://VOTRE-COMPTE.github.io/letuspdf/
+
+INSTALLER SUR LE TELEPHONE
+- iPhone (Safari obligatoire) : ouvrir le lien > Partager > "Sur l'ecran d'accueil".
+- Android (Chrome) : ouvrir le lien > menu ou bandeau "Installer l'application".
+Une fois installee, elle marche hors ligne. Android : "Partager > Let Us PDF" depuis un autre appli ouvre le PDF.
+
+METTRE A JOUR
+Redeposer les fichiers modifies ; si sw.js a change, changer VERSION dans sw.js (ex. 'v2') pour forcer
+la mise a jour du cache. Les pages se rechargent avec la nouvelle version a la visite suivante.
+
+CONFIGURATION REQUISE
+iOS/iPadOS 17.4 ou plus recent, Android avec Chrome a jour (pdf.js recent).
