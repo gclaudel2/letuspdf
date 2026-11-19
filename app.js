@@ -3423,7 +3423,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v9';
+  const APP_VER='v10';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3461,6 +3461,8 @@ if(PWA){
     const r=el.getBoundingClientRect();
     if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
   }
+  const txSync=()=>{const pb=$('#propbar'),tx=!!pb.querySelector('[data-k="kind"]')&&!pb.hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt()};
+  new MutationObserver(txSync).observe($('#propbar'),{childList:true,attributes:true,attributeFilter:['hidden']});
   const fb=$('#mFmt');
   ['mousedown','pointerdown'].forEach(ev=>fb.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
   fb.onclick=()=>{const on=!root.classList.contains('fmt');if(on)placeFmt();root.classList.toggle('fmt',on);if(on)setTimeout(revealEdit,60)};
@@ -3471,7 +3473,7 @@ if(PWA){
   $$('#mbar [data-mt]').forEach(b=>b.onclick=()=>click('[data-tool="'+b.dataset.mt+'"]'));
   /* sheet content: [icon, label, selector of the existing control, keep the sheet open] */
   const TABS={
-    'Outils':[['search','Rechercher','#bSearch'],['undo','Annuler','#bUndo',1],['redo','Rétablir','#bRedo',1],['pen','Stylo','[data-tool="pen"]'],['image','Image','[data-tool="image"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
+    'Outils':[['search','Rechercher','#bSearch'],['undo','Annuler','#bUndo',1],['redo','Rétablir','#bRedo',1],['pen','Stylo','[data-tool="pen"]'],['hl','Surligner','[data-tool="hl"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
     'Pages':[['blank','Page vide','#bBlank'],['rotl','Pivoter à gauche','#bRotL',1],['rotr','Pivoter à droite','#bRotR',1],['mvup','Monter','#bMvUp',1],['mvdn','Descendre','#bMvDn',1],['dup','Copier','#bCopyPg',1],['paste','Coller','#bPastePg'],['trash','Supprimer','#bDelPg'],['sidebar','Miniatures','#bThumbs']],
     'Fichier':[['open','Ouvrir un PDF','#bOpen2'],['merge','Fusionner','#bMerge'],['saveas','Enregistrer sous','#bSaveAs'],['special','Partager / envoyer','[data-sp="email"]'],['special','Invoice → CN','[data-sp="cn"]']],
     'Affichage':[]
@@ -3525,7 +3527,7 @@ if(PWA){
     if(!root.classList.contains('phone'))return;
     const on=t=>toolOn('[data-tool="'+t+'"]');
     $$('#mbar [data-mt]').forEach(b=>b.classList.toggle('on',on(b.dataset.mt)));
-    const more=!['sel','edit','text','hl'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
+    const more=!['sel','edit','text','image'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
     for(const [a,b2] of [['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
     const tx=!!q('#propbar [data-k="kind"]')&&!q('#propbar').hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt();
     const has=S.pdf;
