@@ -242,8 +242,17 @@ html.phone #mhead .mtitle svg{width:20px;height:20px;flex:none;stroke:currentCol
 html.phone #mhead .mtt{display:flex;flex-direction:column;min-width:0;align-items:flex-start}
 html.phone #mhead .mtt i{font:normal 500 9px/1 var(--font);color:var(--muted);margin-top:2px;letter-spacing:.3px}
 html.phone.kb #mbar,html.phone.kb .ioshint{display:none!important}
-html.phone.kb #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;top:var(--ptop,66px)!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:calc(100% - 16px)!important;max-width:none!important;z-index:45;border:1px solid var(--line);border-radius:12px}
+html.phone.kb:not(.tx) #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;top:var(--ptop,66px)!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:calc(100% - 16px)!important;max-width:none!important;z-index:45;border:1px solid var(--line);border-radius:12px}
 html.phone.kb #search,html.phone.kb #search2{max-height:45dvh;overflow:auto}
+html.phone.tx:not(.fmt) #propbar{display:none!important}
+#mFmt{display:none}
+html.phone.tx #mFmt{display:grid;place-items:center;position:fixed;right:10px;width:46px;height:46px;border-radius:23px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);box-shadow:var(--shadow);font:700 17px var(--font);z-index:46;padding:0}
+html.phone.tx.fmt #mFmt{background:var(--accent);color:#fff}
+html.phone.tx.fmtTop #mFmt{top:var(--ptop,66px);bottom:auto}
+html.phone.tx.fmtBot #mFmt{bottom:var(--pbot,70px);top:auto}
+html.phone.fmt #propbar{display:flex!important;position:fixed!important;left:8px!important;right:64px!important;width:auto!important;max-width:none!important;transform:none!important;z-index:45}
+html.phone.fmtTop #propbar{top:var(--ptop,66px)!important;bottom:auto!important}
+html.phone.fmtBot #propbar{bottom:var(--pbot,70px)!important;top:auto!important}
 html.phone.kb #toast{bottom:auto;top:calc(var(--ptop,66px) + 170px)}
 html.phone #mhead .mpg{flex:none;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:color-mix(in srgb,var(--fg) 6%,transparent);color:var(--fg);font:600 13px var(--font)}
 html.phone #mhead .mtitle{flex-direction:row!important;align-items:center!important;gap:8px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
@@ -424,6 +433,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
     <button class="mt" id="mMore"><span data-i="special"></span>Plus</button>
   </nav>
   <div id="msheet" hidden><div class="mback"></div><div class="mpanel" role="dialog" aria-label="Menu"><div class="mgrip"></div><div class="mtabs" id="mTabs"></div><div id="mBody"></div></div></div>
+<button id="mFmt" aria-label="Options du texte">Aa</button>
 <div id="toast" hidden></div>
 <div id="modal" hidden><div class="box">
   <h2>Document protégé</h2>

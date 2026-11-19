@@ -63,7 +63,7 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const ZSTEPS=[.25,.33,.5,.67,.75,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4];
 
 let toastT=0;
-function toast(msg,ms){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},ms||3600)}
+function toast(msg,ms){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},PWA?3000:(ms||3600))}
 function busy(on,msg){const b=$('#busy');b.hidden=!on;if(msg)b.textContent=msg}
 
 /* ---------- history ---------- */
@@ -2187,7 +2187,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#spMenu').hidde
 /* ---------- floating properties bar ---------- */
 const TOOL_HINT={
   edit:'Touchez un texte du document pour le modifier.',
-  text:'Cliquez sur la page à l\'endroit où ajouter du texte.',
+  text:'Touchez la page à l\'endroit où ajouter du texte.',
   hl:'Touchez longuement un mot puis glissez pour surligner.',
   rect:'Faites glisser sur la page pour dessiner un rectangle.',
   pen:'Dessinez à main levée sur la page.',
@@ -2658,7 +2658,7 @@ document.addEventListener('pointerdown',e=>{
   if(!S.editing)return;
   const a=findAnn(S.editing),el=a&&layerEl(a);
   if(el&&el.contains(e.target))return;
-  if(e.target.closest('#propbar,#modal4,#toast'))return;
+  if(e.target.closest('#propbar,#mFmt,#modal4,#toast'))return;
   commitEdit();
 },true);
 
@@ -3423,7 +3423,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v8';
+  const APP_VER='v9';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3436,6 +3436,7 @@ if(PWA){
     const hh=$('#mhead').getBoundingClientRect().bottom;root.style.setProperty('--hh',Math.round(hh)+'px');const vt=vv?Math.max(0,vv.offsetTop):0;root.style.setProperty('--ptop',Math.round(Math.max(hh,vt)+6)+'px');
     const kb=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
     root.style.setProperty('--kb',kb+'px');
+    root.style.setProperty('--pbot',(kb>80?kb+56:70)+'px');
     root.classList.toggle('kb',kb>80||isEd(document.activeElement));
     if(window.scrollY)window.scrollTo(0,0);
   };
@@ -3443,12 +3444,26 @@ if(PWA){
   document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
   document.addEventListener('focusout',()=>setTimeout(kbSync,150));
   /* keep the text being edited visible between the floating tool panel (top) and the keyboard */
+  /* floating "Aa" button + options panel: placed on the side opposite to the text being edited */
+  const fmtEl=()=>{const a=document.activeElement;if(a&&a.isContentEditable)return a;return document.querySelector('#pages .a.sel,#pages .a-edit.sel')};
+  function placeFmt(){
+    const el=fmtEl(),top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight;
+    let atTop=false;
+    if(el){const r=el.getBoundingClientRect();atTop=(r.top+r.height/2)>(top+h/2)}
+    root.classList.toggle('fmtTop',atTop);root.classList.toggle('fmtBot',!atTop);
+  }
   function revealEdit(){
     const el=document.activeElement;if(!el||!el.isContentEditable)return;
-    const pb=$('#propbar'),top=(pb&&!pb.hidden?pb.getBoundingClientRect().bottom:$('#mhead').getBoundingClientRect().bottom)+10;
-    const bot=(vv?vv.offsetTop+vv.height:innerHeight)-60,r=el.getBoundingClientRect(),v=$('#viewer');
+    placeFmt();
+    const pb=$('#propbar'),v=$('#viewer');
+    let top=$('#mhead').getBoundingClientRect().bottom+10,bot=(vv?vv.offsetTop+vv.height:innerHeight)-60;
+    if(root.classList.contains('fmt')){const r=pb.getBoundingClientRect();if(root.classList.contains('fmtTop'))top=Math.max(top,r.bottom+10);else bot=Math.min(bot,r.top-10)}
+    const r=el.getBoundingClientRect();
     if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
   }
+  const fb=$('#mFmt');
+  ['mousedown','pointerdown'].forEach(ev=>fb.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+  fb.onclick=()=>{const on=!root.classList.contains('fmt');if(on)placeFmt();root.classList.toggle('fmt',on);if(on)setTimeout(revealEdit,60)};
   kbSync();
   const q=sel=>document.querySelector(sel);
   const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
@@ -3512,6 +3527,7 @@ if(PWA){
     $$('#mbar [data-mt]').forEach(b=>b.classList.toggle('on',on(b.dataset.mt)));
     const more=!['sel','edit','text','hl'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
     for(const [a,b2] of [['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
+    const tx=!!q('#propbar [data-k="kind"]')&&!q('#propbar').hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt();
     const has=S.pdf;
     $('#mTitle').textContent=has?(S.name||'Document')+(S.dirty?' •':''):'Let Us PDF';
     $('#mSub').textContent=has?$('#pgIn').value+' '+$('#pgTot').textContent:'—';
