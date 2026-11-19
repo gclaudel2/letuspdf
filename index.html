@@ -242,9 +242,9 @@ html.phone #mhead .mtitle svg{width:20px;height:20px;flex:none;stroke:currentCol
 html.phone #mhead .mtt{display:flex;flex-direction:column;min-width:0;align-items:flex-start}
 html.phone #mhead .mtt i{font:normal 500 9px/1 var(--font);color:var(--muted);margin-top:2px;letter-spacing:.3px}
 html.phone.kb #mbar,html.phone.kb .ioshint{display:none!important}
-html.phone.kb #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;top:calc(var(--hh,60px) + 6px)!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:calc(100% - 16px)!important;max-width:none!important;z-index:45;border:1px solid var(--line);border-radius:12px}
+html.phone.kb #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;top:var(--ptop,66px)!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:calc(100% - 16px)!important;max-width:none!important;z-index:45;border:1px solid var(--line);border-radius:12px}
 html.phone.kb #search,html.phone.kb #search2{max-height:45dvh;overflow:auto}
-html.phone.kb #toast{bottom:auto;top:calc(var(--hh,60px) + 170px)}
+html.phone.kb #toast{bottom:auto;top:calc(var(--ptop,66px) + 170px)}
 html.phone #mhead .mpg{flex:none;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:color-mix(in srgb,var(--fg) 6%,transparent);color:var(--fg);font:600 13px var(--font)}
 html.phone #mhead .mtitle{flex-direction:row!important;align-items:center!important;gap:8px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
 html.phone #mhead .mtitle b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600}

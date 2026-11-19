@@ -3423,7 +3423,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v7';
+  const APP_VER='v8';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3433,11 +3433,11 @@ if(PWA){
   const vv=window.visualViewport;
   const isEd=e=>e&&(e.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName))&&!e.closest('#modal,#modal2,#modal3,#modal4,#msheet');
   const kbSync=()=>{
-    const hh=$('#mhead').getBoundingClientRect().bottom;root.style.setProperty('--hh',Math.round(hh)+'px');
+    const hh=$('#mhead').getBoundingClientRect().bottom;root.style.setProperty('--hh',Math.round(hh)+'px');const vt=vv?Math.max(0,vv.offsetTop):0;root.style.setProperty('--ptop',Math.round(Math.max(hh,vt)+6)+'px');
     const kb=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
     root.style.setProperty('--kb',kb+'px');
     root.classList.toggle('kb',kb>80||isEd(document.activeElement));
-    if(kb>80&&(window.scrollY||vv.offsetTop))window.scrollTo(0,0);
+    if(window.scrollY)window.scrollTo(0,0);
   };
   if(vv){vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync)}
   document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
