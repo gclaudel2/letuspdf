@@ -3391,11 +3391,11 @@ if(PWA){
   $$('#mhead [data-i],#mbar [data-i]').forEach(e=>{e.innerHTML=ICONS[e.dataset.i]||''});
   const q=sel=>document.querySelector(sel);
   const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
-  $('#mUndo').onclick=()=>click('#bUndo');$('#mRedo').onclick=()=>click('#bRedo');$('#mSave').onclick=()=>click('#bSave');
+  $('#mSave').onclick=()=>click('#bSave');
   $$('#mbar [data-mt]').forEach(b=>b.onclick=()=>click('[data-tool="'+b.dataset.mt+'"]'));
   /* sheet content: [icon, label, selector of the existing control, keep the sheet open] */
   const TABS={
-    'Outils':[['edit','Modifier le texte','[data-tool="edit"]'],['image','Image','[data-tool="image"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
+    'Outils':[['search','Rechercher','#bSearch'],['undo','Annuler','#bUndo',1],['redo','Rétablir','#bRedo',1],['pen','Stylo','[data-tool="pen"]'],['image','Image','[data-tool="image"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
     'Pages':[['blank','Page vide','#bBlank'],['rotl','Pivoter à gauche','#bRotL',1],['rotr','Pivoter à droite','#bRotR',1],['mvup','Monter','#bMvUp',1],['mvdn','Descendre','#bMvDn',1],['dup','Copier','#bCopyPg',1],['paste','Coller','#bPastePg'],['trash','Supprimer','#bDelPg'],['sidebar','Miniatures','#bThumbs']],
     'Fichier':[['open','Ouvrir un PDF','#bOpen2'],['merge','Fusionner','#bMerge'],['saveas','Enregistrer sous','#bSaveAs'],['special','Partager / envoyer','[data-sp="email"]'],['special','Invoice → CN','[data-sp="cn"]']],
     'Affichage':[]
@@ -3409,11 +3409,11 @@ if(PWA){
     const body=$('#mBody');
     if(tab==='Affichage'){
       body.innerHTML='<div class="mzoom"><button class="btn" id="zM" aria-label="Zoom arrière">'+ICONS.minus+'</button><span class="zl" id="zL"></span><button class="btn" id="zP" aria-label="Zoom avant">'+ICONS.plus+'</button></div>'
-        +'<div class="mgrid"><button id="zFit">'+ICONS.doc+'Ajuster à la page</button><button id="zSea">'+ICONS.search+'Rechercher</button></div>'
+        +'<div class="mgrid"><button id="zFit">'+ICONS.doc+'Ajuster à la page</button></div>'
         +'<div class="mrow"><label for="mPg">Aller à la page</label><input class="inp num" id="mPg" inputmode="numeric" style="width:84px"><span class="lbl" id="mPgT"></span></div>'
         +'<div class="mrow"><label for="mTh">Thème</label><select class="inp" id="mTh"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>';
       $('#zM').onclick=()=>click('#bZout');$('#zP').onclick=()=>click('#bZin');
-      $('#zFit').onclick=()=>{click('#bFitP')};$('#zSea').onclick=()=>{close();click('#bSearch')};
+      $('#zFit').onclick=()=>{click('#bFitP')};
       const pg=$('#mPg');pg.value=$('#pgIn').value;$('#mPgT').textContent=$('#pgTot').textContent;
       pg.onchange=()=>{const t=$('#pgIn');t.value=pg.value;t.dispatchEvent(new Event('change',{bubbles:true}));t.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))};
       const th=$('#mTh');th.value=$('#themeSel').value;th.onchange=()=>{const t=$('#themeSel');t.value=th.value;t.dispatchEvent(new Event('change',{bubbles:true}))};
@@ -3438,7 +3438,7 @@ if(PWA){
   });
   const open=t=>{tab=t||tab;sheetOpen=true;sheet.hidden=false;drawSheet()};
   $('#mMore').onclick=()=>open('Outils');
-  $('#mTitleBtn').onclick=()=>open('Pages');
+  $('#mTitleBtn').onclick=()=>open('Pages');$('#mPgBtn').onclick=()=>open('Affichage');
   sheet.querySelector('.mback').onclick=close;
   /* swipe the sheet down to close */
   let y0=null;const pnl=sheet.querySelector('.mpanel');
@@ -3449,11 +3449,11 @@ if(PWA){
     if(!root.classList.contains('phone'))return;
     const on=t=>toolOn('[data-tool="'+t+'"]');
     $$('#mbar [data-mt]').forEach(b=>b.classList.toggle('on',on(b.dataset.mt)));
-    const more=!['sel','text','hl','pen'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
-    for(const [a,b2] of [['#mUndo','#bUndo'],['#mRedo','#bRedo'],['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
+    const more=!['sel','edit','text','hl'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
+    for(const [a,b2] of [['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
     const has=S.pdf;
     $('#mTitle').textContent=has?(S.name||'Document')+(S.dirty?' •':''):'Let Us PDF';
-    $('#mSub').textContent=has?'Page '+$('#pgIn').value+' '+$('#pgTot').textContent:'Aucun document ouvert';
+    $('#mSub').textContent=has?$('#pgIn').value+' '+$('#pgTot').textContent:'—';
     syncSheet();
   },250);
 }

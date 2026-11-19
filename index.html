@@ -237,7 +237,9 @@ button,input,select{font:inherit;color:inherit}
 #mhead,#mbar,#msheet{display:none}
 html.phone #topbar,html.phone #tools{display:none!important}
 html.phone #mhead{display:flex;align-items:center;gap:6px;padding:max(8px,env(safe-area-inset-top)) 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-html.phone #mhead .mtitle{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
+html.phone #mhead .mtitle svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;color:var(--accent)}
+html.phone #mhead .mpg{flex:none;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:color-mix(in srgb,var(--fg) 6%,transparent);color:var(--fg);font:600 13px var(--font)}
+html.phone #mhead .mtitle{flex-direction:row!important;align-items:center!important;gap:8px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
 html.phone #mhead .mtitle b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600}
 html.phone #mhead .mtitle small{color:var(--muted);font-size:12px}
 html.phone #mhead .btn{height:42px}
@@ -280,10 +282,9 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
 </head><body>
 <div id="app">
   <header id="mhead" aria-label="Document">
-    <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><b id="mTitle">Let Us PDF</b><small id="mSub"></small></button>
-    <button class="btn icon" id="mUndo" aria-label="Annuler" data-i="undo" disabled></button>
-    <button class="btn icon" id="mRedo" aria-label="Rétablir" data-i="redo" disabled></button>
-    <button class="btn primary" id="mSave" disabled><span data-i="save"></span>Enregistrer</button>
+    <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><span data-i="doc"></span><b id="mTitle">Let Us PDF</b></button>
+    <button class="mpg" id="mPgBtn" aria-label="Aller à la page"><span id="mSub"></span></button>
+    <button class="btn primary" id="mSave" disabled aria-label="Enregistrer"><span data-i="save"></span>Enregistrer</button>
   </header>
   <div class="bar" id="topbar">
     <div class="brand"><i data-i="doc"></i><span>Let Us PDF</span></div>
@@ -410,9 +411,9 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
 </div>
   <nav id="mbar" aria-label="Outils">
     <button class="mt" data-mt="sel"><span data-i="cursor"></span>Lecture</button>
-    <button class="mt" data-mt="text"><span data-i="type"></span>Texte</button>
+    <button class="mt" data-mt="edit"><span data-i="edit"></span>Modifier</button>
     <button class="mt" data-mt="hl"><span data-i="hl"></span>Surligner</button>
-    <button class="mt" data-mt="pen"><span data-i="pen"></span>Stylo</button>
+    <button class="mt" data-mt="text"><span data-i="type"></span>Texte</button>
     <button class="mt" id="mMore"><span data-i="special"></span>Plus</button>
   </nav>
   <div id="msheet" hidden><div class="mback"></div><div class="mpanel" role="dialog" aria-label="Menu"><div class="mgrip"></div><div class="mtabs" id="mTabs"></div><div id="mBody"></div></div></div>
