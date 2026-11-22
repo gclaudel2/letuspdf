@@ -46,6 +46,7 @@ const PDFJS_BASE='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 const DESKTOP=!!window.__DESKTOP__;
 /* installable web app (phones/tablets): same bundled libraries as the desktop app, no local backend */
 const PWA=!!window.__PWA__;
+const NATIVE=!!(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.letuspdf); /* inside the iPhone app (WKWebView) */
 const LOCAL=DESKTOP||PWA;
 const COARSE=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
 /* the leading "./" matters: when the real worker can't start (e.g. too many already running) pdf.js
@@ -2983,14 +2984,20 @@ const mobileDL={share:true,save({filename,data}){
     const base=filename.replace(/\.pdf$/i,'');
     const ov=document.createElement('div');ov.id='modal';ov.style.zIndex=70;
     const mb=(data.size/1048576).toFixed(data.size>1048576*10?0:1);
-    ov.innerHTML='<div class="box savebox"><h2>Enregistrer le fichier</h2><input class="inp" id="svName" aria-label="Nom du fichier" autocapitalize="off" autocomplete="off" spellcheck="false"><small>'+mb+' Mo · PDF</small><div class="row"><button class="btn primary" id="svShare">Choisir l\u2019emplacement…</button></div><div class="row"><button class="btn" id="svDl">Télécharger</button><button class="btn" id="svNo">Annuler</button></div><small>« Choisir l\u2019emplacement » ouvre le menu du téléphone : choisissez <b>Enregistrer dans Fichiers</b> (iPhone) ou votre application de stockage (Android).</small></div>';
+    ov.innerHTML='<div class="box savebox"><h2>Enregistrer le fichier</h2><input class="inp" id="svName" aria-label="Nom du fichier" autocapitalize="off" autocomplete="off" spellcheck="false"><small>'+mb+' Mo · PDF</small><div class="row"><button class="btn primary" id="svShare">Choisir l\u2019emplacement…</button></div><div class="row">'+(NATIVE?'':'<button class="btn" id="svDl">Télécharger</button>')+'<button class="btn" id="svNo">Annuler</button></div><small>'+(NATIVE?'Le sélecteur de fichiers de l\u2019iPhone s\u2019ouvre : choisissez le dossier (iCloud Drive, Sur mon iPhone, OneDrive…).':'« Choisir l\u2019emplacement » ouvre le menu du téléphone : choisissez <b>Enregistrer dans Fichiers</b> (iPhone) ou votre application de stockage (Android).')+'</small></div>';
     document.body.append(ov);
     const inp=ov.querySelector('#svName');inp.value=base;
     const nm=()=>(inp.value.trim().replace(/[\\/:*?"<>|]+/g,'-')||base).replace(/\.pdf$/i,'')+'.pdf';
     const close=()=>ov.remove();
     ov.querySelector('#svNo').onclick=()=>{close();const e=new Error('declined');e.code='declined';rej(e)};
-    ov.querySelector('#svDl').onclick=()=>{dl(nm());close();res()};
+    if(!NATIVE)ov.querySelector('#svDl').onclick=()=>{dl(nm());close();res()};
     ov.querySelector('#svShare').onclick=async()=>{
+      if(NATIVE){
+        const name=nm();
+        const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]||'');fr.onerror=ko;fr.readAsDataURL(data)});
+        window.webkit.messageHandlers.letuspdf.postMessage({type:'save',name,b64});
+        close();res();return;
+      }
       const file=new File([data],nm(),{type:'application/pdf'});
       if(navigator.canShare&&navigator.canShare({files:[file]})){
         try{await navigator.share({files:[file]});close();res();return}
@@ -3408,11 +3415,13 @@ if(PWA){
   if('launchQueue' in window)launchQueue.setConsumer(async p=>{
     for(const h of (p&&p.files)||[]){try{await tryOpen(await h.getFile(),h)}catch(e){console.error(e)}}
   });
+  /* iPhone app: PDF handed over by iOS ("Ouvrir avec", Fichiers, Mail…) */
+  window.__nativeOpen=async(name,b64)=>{try{const b=await (await fetch('data:application/pdf;base64,'+b64)).blob();await tryOpen(new File([b],name||'document.pdf',{type:'application/pdf'}))}catch(e){console.error(e);toast('Impossible d\u2019ouvrir ce fichier.')}};
   /* iPhone / iPad: no install prompt exists, so show how once */
   try{
     const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
     const standalone=navigator.standalone||(matchMedia&&matchMedia('(display-mode:standalone)').matches);
-    if(ios&&!standalone&&!localStorage.getItem('letus-ios-hint')){
+    if(ios&&!standalone&&!NATIVE&&!localStorage.getItem('letus-ios-hint')){
       const d=document.createElement('div');d.className='ioshint';
       d.innerHTML='<span>Pour installer : touchez <b>Partager</b> puis <b>Sur l’écran d’accueil</b>.</span><button class="btn">OK</button>';
       d.querySelector('button').onclick=()=>{d.remove();try{localStorage.setItem('letus-ios-hint','1')}catch(e){}};
@@ -3423,7 +3432,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v10';
+  const APP_VER='v11';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
