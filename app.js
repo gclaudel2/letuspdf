@@ -3432,7 +3432,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v11';
+  const APP_VER='v12';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3525,6 +3525,26 @@ if(PWA){
   });
   const open=t=>{tab=t||tab;sheetOpen=true;sheet.hidden=false;drawSheet()};
   $('#mMore').onclick=()=>open('Outils');
+  /* home: a shortcut in the header to open another PDF (or switch / close the open documents) */
+  const mh=$('#mHome');mh.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg>';
+  const home=document.createElement('div');home.id='mhome';home.hidden=true;document.body.append(home);
+  const esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function drawHome(){
+    const items=S.tabs.map((t,i)=>{const d=i===S.ti?S:t.snap;return {i,name:d.name,dirty:d.dirty}});
+    home.innerHTML='<h1>Let Us PDF</h1><p>Ouvrez un PDF pour le lire et le modifier. Rien n\u2019est envoy\u00e9 : tout reste sur votre appareil.</p>'
+      +'<button class="btn primary big" id="hOpen">'+ICONS.open+'Choisir un PDF</button>'
+      +(items.length?'<h2>Documents ouverts</h2>'+items.map(x=>'<div class="doc'+(x.i===S.ti?' on':'')+'"><button class="nm" data-s="'+x.i+'">'+esc(x.name)+(x.dirty?' \u2022':'')+'.pdf</button><button class="x" data-c="'+x.i+'" aria-label="Fermer ce document">\u00d7</button></div>').join(''):'')
+      +(items.length?'<div class="back"><button class="btn big" id="hBack">Retour au document</button></div>':'');
+  }
+  const closeHome=()=>{home.hidden=true};
+  const openHome=()=>{drawHome();home.hidden=false};
+  mh.onclick=openHome;
+  home.addEventListener('click',e=>{
+    if(e.target.closest('#hBack')){closeHome();return}
+    if(e.target.closest('#hOpen')){closeHome();$('#bOpen2').click();return}
+    const s=e.target.closest('[data-s]');if(s){switchTab(+s.dataset.s);closeHome();return}
+    const c=e.target.closest('[data-c]');if(c){closeTab(+c.dataset.c).then(()=>{if(!S.pdf)closeHome();else drawHome()});return}
+  });
   $('#mTitleBtn').onclick=()=>open('Pages');$('#mPgBtn').onclick=()=>open('Affichage');
   sheet.querySelector('.mback').onclick=close;
   /* swipe the sheet down to close */
@@ -3539,7 +3559,7 @@ if(PWA){
     const more=!['sel','edit','text','image'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
     for(const [a,b2] of [['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
     const tx=!!q('#propbar [data-k="kind"]')&&!q('#propbar').hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt();
-    const has=S.pdf;
+    const has=S.pdf;mh.hidden=!has;if(!has&&!home.hidden)closeHome();
     $('#mTitle').textContent=has?(S.name||'Document')+(S.dirty?' •':''):'Let Us PDF';
     $('#mSub').textContent=has?$('#pgIn').value+' '+$('#pgTot').textContent:'—';
     syncSheet();

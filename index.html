@@ -255,6 +255,20 @@ html.phone.fmt #propbar{display:flex!important;position:fixed!important;left:8px
 html.phone.fmtTop #propbar{top:var(--ptop,66px)!important;bottom:auto!important}
 html.phone.fmtBot #propbar{bottom:var(--pbot,70px)!important;top:auto!important}
 html.phone.kb #toast{bottom:auto;top:calc(var(--ptop,66px) + 170px)}
+html.phone #mhead .mhome{flex:none;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);display:grid;place-items:center;padding:0}
+html.phone #mhead .mhome[hidden]{display:none}
+html.phone #mhead .mhome svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#mhome{position:fixed;inset:0;z-index:48;background:var(--bg);display:flex;flex-direction:column;padding:max(18px,env(safe-area-inset-top)) 18px max(18px,env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch}
+#mhome[hidden]{display:none}
+#mhome h1{font:700 24px var(--font);margin:6px 0 4px}
+#mhome p{color:var(--muted);margin:0 0 18px;font-size:14px}
+#mhome .big{height:54px;font-size:17px;justify-content:center;width:100%}
+#mhome h2{font:600 13px var(--font);text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:24px 0 8px}
+#mhome .doc{display:flex;align-items:center;gap:10px;padding:12px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:8px}
+#mhome .doc.on{border-color:var(--accent)}
+#mhome .doc button.nm{flex:1;min-width:0;text-align:left;background:none;border:0;color:var(--fg);font:500 15px var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:4px 0}
+#mhome .doc .x{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:20px;line-height:1}
+#mhome .back{margin-top:auto;padding-top:18px}
 html.phone #mhead .mpg{flex:none;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);background:color-mix(in srgb,var(--fg) 6%,transparent);color:var(--fg);font:600 13px var(--font)}
 html.phone #mhead .mtitle{flex-direction:row!important;align-items:center!important;gap:8px;flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--fg);padding:2px 0;font:inherit}
 html.phone #mhead .mtitle b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:600}
@@ -299,6 +313,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
 </head><body>
 <div id="app">
   <header id="mhead" aria-label="Document">
+    <button class="mhome" id="mHome" aria-label="Accueil" hidden></button>
     <button class="mtitle" id="mTitleBtn" aria-label="Pages du document"><span data-i="doc"></span><span class="mtt"><b id="mTitle">Let Us PDF</b><i id="mVer"></i></span></button>
     <button class="mpg" id="mPgBtn" aria-label="Aller à la page"><span id="mSub"></span></button>
     <button class="btn primary" id="mSave" disabled aria-label="Enregistrer"><span data-i="save"></span>Enregistrer</button>
