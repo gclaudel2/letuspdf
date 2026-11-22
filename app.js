@@ -1477,13 +1477,27 @@ function currentEditText(a){
   return el?el.innerText.replace(/\u00a0/g,' ').replace(/\r/g,'').replace(/\n+$/,''):a.text;
 }
 /* Make the annotation element editable. Editing only ends on commitEdit(): Escape, or a click elsewhere in the document. */
+let lastTap=null;
+addEventListener('pointerdown',e=>{lastTap={x:e.clientX,y:e.clientY,t:Date.now()}},true);
 function armEditor(a){
   const el=layerEl(a);if(!el)return;
   el.contentEditable=PLAIN?'plaintext-only':'true';
   el.spellcheck=false;
-  el.focus();
-  const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
+  /* keep the view exactly where it is (focus() / the iOS keyboard would otherwise scroll it, e.g. back to the
+     start of the line when zoomed) and put the caret where the finger tapped */
+  const vs=[viewer,viewer2].map(v=>[v,v.scrollLeft,v.scrollTop]);
+  const keep=()=>vs.forEach(([v,l,t])=>{if(v.scrollLeft!==l)v.scrollLeft=l;if(Math.abs(v.scrollTop-t)>1&&!document.documentElement.classList.contains('kb'))v.scrollTop=t});
+  el.focus({preventScroll:true});keep();
+  let r=null;
+  if(lastTap&&Date.now()-lastTap.t<1500){
+    try{
+      if(document.caretPositionFromPoint){const c=document.caretPositionFromPoint(lastTap.x,lastTap.y);if(c&&el.contains(c.offsetNode)){r=document.createRange();r.setStart(c.offsetNode,c.offset);r.collapse(true)}}
+      else if(document.caretRangeFromPoint){const c=document.caretRangeFromPoint(lastTap.x,lastTap.y);if(c&&el.contains(c.startContainer))r=c}
+    }catch(e){}
+  }
+  if(!r){r=document.createRange();r.selectNodeContents(el);r.collapse(false)}
   const s=getSelection();s.removeAllRanges();s.addRange(r);
+  [60,250,600].forEach(ms=>setTimeout(()=>{if(document.activeElement===el)keep()},ms));
   el.onkeydown=ev=>{
     ev.stopPropagation();
     if(ev.key==='Escape'){ev.preventDefault();commitEdit()}
@@ -3440,7 +3454,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v14';
+  const APP_VER='v15';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3477,6 +3491,9 @@ if(PWA){
     if(root.classList.contains('fmt')){const r=pb.getBoundingClientRect();if(root.classList.contains('fmtTop'))top=Math.max(top,r.bottom+10);else bot=Math.min(bot,r.top-10)}
     const r=el.getBoundingClientRect();
     if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
+    const sel=getSelection();
+    if(sel.rangeCount){const cr=sel.getRangeAt(0).getClientRects()[0];const vr=v.getBoundingClientRect();
+      if(cr&&cr.height){if(cr.left<vr.left+12)v.scrollLeft-=vr.left+12-cr.left;else if(cr.right>vr.right-12)v.scrollLeft+=cr.right-vr.right+12}}
   }
   const txSync=()=>{const pb=$('#propbar'),tx=!!pb.querySelector('[data-k="kind"]')&&!pb.hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt()};
   new MutationObserver(txSync).observe($('#propbar'),{childList:true,attributes:true,attributeFilter:['hidden']});
