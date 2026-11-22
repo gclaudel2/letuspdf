@@ -3384,10 +3384,18 @@ $('#bPastePg').onclick=()=>pastePages();
 for(const t of ['gesturestart','gesturechange','gestureend'])document.addEventListener(t,e=>e.preventDefault(),{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
 (function(){
-  let d0=0,z0=1,on=false;
+  let d0=0,z0=1,on=false,fx=0,fy=0;
   const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)||1;
-  viewer.addEventListener('touchstart',e=>{if(e.touches.length===2&&S.pages.length){d0=dist(e.touches);z0=S.zoom;on=true}},{passive:true});
-  viewer.addEventListener('touchmove',e=>{if(!on||e.touches.length!==2)return;e.preventDefault();setZoom(z0*dist(e.touches)/d0)},{passive:false});
+  const mid=t=>{const r=viewer.getBoundingClientRect();return[(t[0].clientX+t[1].clientX)/2-r.left,(t[0].clientY+t[1].clientY)/2-r.top]};
+  /* the point of the document between the two fingers stays between them while zooming */
+  viewer.addEventListener('touchstart',e=>{if(e.touches.length===2&&S.pages.length){
+    d0=dist(e.touches);z0=S.zoom;on=true;
+    const[ox,oy]=mid(e.touches);fx=(viewer.scrollLeft+ox)/(viewer.scrollWidth||1);fy=(viewer.scrollTop+oy)/(viewer.scrollHeight||1);
+  }},{passive:true});
+  viewer.addEventListener('touchmove',e=>{if(!on||e.touches.length!==2)return;e.preventDefault();
+    setZoom(z0*dist(e.touches)/d0,true);
+    const[ox,oy]=mid(e.touches);viewer.scrollLeft=fx*viewer.scrollWidth-ox;viewer.scrollTop=fy*viewer.scrollHeight-oy;
+  },{passive:false});
   const end=e=>{if(e.touches.length<2)on=false};
   viewer.addEventListener('touchend',end,{passive:true});viewer.addEventListener('touchcancel',end,{passive:true});
 })();
@@ -3432,7 +3440,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v13';
+  const APP_VER='v14';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
