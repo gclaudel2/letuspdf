@@ -4,7 +4,7 @@ const CACHE = 'letuspdf-' + VERSION;
 const SHARE = 'letuspdf-share';
 const ASSETS = [
   './', './index.html', './app.js', './manifest.webmanifest',
-  './lib/pdf.min.mjs', './lib/pdf.worker.min.mjs', './lib/pdf-lib.min.js',
+  './lib/pdf.min.mjs', './lib/pdf.worker.min.mjs', './lib/pdf-lib.min.js', './lib/fontkit.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './favicon32.png'
 ];
 
