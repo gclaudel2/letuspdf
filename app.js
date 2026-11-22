@@ -64,6 +64,7 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const ZSTEPS=[.25,.33,.5,.67,.75,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4];
 
 let toastT=0;
+window.__toast=(m,ms)=>toast(m,ms);
 function toast(msg,ms){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},PWA?3000:(ms||3600))}
 function busy(on,msg){const b=$('#busy');b.hidden=!on;if(msg)b.textContent=msg}
 
@@ -966,7 +967,7 @@ function updateCnt(){
 function renderList(){
   const box=$('#sList');
   if(!S.hits.length){
-    box.innerHTML=(S.q&&S.q.trim()&&!/Expression/.test($('#sCnt').textContent))?'<div class="sn">Aucun résultat.</div>':'';
+    box.innerHTML=(S.q&&S.q.trim()&&!/xpression/i.test($('#sCnt').textContent))?'<div class="sn">Aucun résultat.</div>':'';
     return;
   }
   const per={};for(const h of S.hits)per[h.n]=(per[h.n]||0)+1;
@@ -1097,7 +1098,7 @@ function updateCnt2(){
 function renderList2(){
   const box=$('#sList2');
   if(!S.hits2.length){
-    box.innerHTML=(S.q2&&S.q2.trim()&&!/Expression/.test($('#sCnt2').textContent))?'<div class="sn">Aucun résultat.</div>':'';
+    box.innerHTML=(S.q2&&S.q2.trim()&&!/xpression/i.test($('#sCnt2').textContent))?'<div class="sn">Aucun résultat.</div>':'';
     return;
   }
   const per={};for(const h of S.hits2)per[h.n]=(per[h.n]||0)+1;
@@ -3001,6 +3002,16 @@ const mobileDL={share:true,save({filename,data}){
     ov.innerHTML='<div class="box savebox"><h2>Enregistrer le fichier</h2><input class="inp" id="svName" aria-label="Nom du fichier" autocapitalize="off" autocomplete="off" spellcheck="false"><small>'+mb+' Mo · PDF</small><div class="row"><button class="btn primary" id="svShare">Choisir l\u2019emplacement…</button></div><div class="row">'+(NATIVE?'':'<button class="btn" id="svDl">Télécharger</button>')+'<button class="btn" id="svNo">Annuler</button></div><small>'+(NATIVE?'Le sélecteur de fichiers de l\u2019iPhone s\u2019ouvre : choisissez le dossier (iCloud Drive, Sur mon iPhone, OneDrive…).':'« Choisir l\u2019emplacement » ouvre le menu du téléphone : choisissez <b>Enregistrer dans Fichiers</b> (iPhone) ou votre application de stockage (Android).')+'</small></div>';
     document.body.append(ov);
     const inp=ov.querySelector('#svName');inp.value=base;
+    if(NATIVE){
+      /* iPhone app: also offer the system share sheet (Mail, Messages, AirDrop…) */
+      const sb=document.createElement('button');sb.className='btn';sb.id='svNat';sb.textContent='Partager…';
+      ov.querySelector('.row').appendChild(sb);
+      sb.onclick=async()=>{
+        const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]||'');fr.onerror=ko;fr.readAsDataURL(data)});
+        window.webkit.messageHandlers.letuspdf.postMessage({type:'share',name:nm(),b64});
+        close();res();
+      };
+    }
     const nm=()=>(inp.value.trim().replace(/[\\/:*?"<>|]+/g,'-')||base).replace(/\.pdf$/i,'')+'.pdf';
     const close=()=>ov.remove();
     ov.querySelector('#svNo').onclick=()=>{close();const e=new Error('declined');e.code='declined';rej(e)};
@@ -3454,7 +3465,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v15';
+  const APP_VER='v16';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3516,6 +3527,29 @@ if(PWA){
   const sheet=$('#msheet');
   const close=()=>{sheet.hidden=true;sheetOpen=false};
   const toolOn=sel=>{const e=q(sel);return !!(e&&e.classList.contains('on'))};
+
+  /* About screen: version, privacy, support and the open-source licences the app has to display */
+  const SITE='https://gclaudel2.github.io/letuspdf/';
+  function showAbout(){
+    let o=$('#mAbout');if(o)o.remove();
+    o=document.createElement('div');o.id='mAbout';
+    o.style.cssText='position:fixed;inset:0;z-index:70;background:var(--bg);color:var(--fg,inherit);overflow:auto;-webkit-overflow-scrolling:touch;padding:max(18px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));font-size:15px;line-height:1.5';
+    const MIT=(n)=>'<p><b>'+n+'</b> — MIT License</p>';
+    o.innerHTML='<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><button class="btn" id="abX" style="min-height:44px">Fermer</button><h2 style="margin:0;font-size:20px">Let Us PDF <small style="font-weight:400;opacity:.6">'+APP_VER+'</small></h2></div>'
+      +'<p>Lire et modifier un PDF. Rien n’est envoyé : tout reste sur votre appareil.</p>'
+      +'<p><a href="'+SITE+'privacy.html" target="_blank" rel="noopener">Politique de confidentialité</a><br><a href="'+SITE+'support.html" target="_blank" rel="noopener">Aide et contact</a></p>'
+      +'<h3 style="margin:22px 0 6px;font-size:17px">Licences / Open-source licenses</h3>'
+      +'<div lang="en" style="font-size:13px;opacity:.9">'
+      +'<p>Let Us PDF uses the following open-source software.</p>'
+      +'<p><b>PDF.js</b> — Copyright Mozilla Foundation — Apache License 2.0<br>https://github.com/mozilla/pdf.js</p>'
+      +'<p><b>pdf-lib</b> — Copyright (c) 2019 Andrew Dillon — MIT License<br>https://github.com/Hopding/pdf-lib<br>(includes tslib, Copyright Microsoft Corporation, Apache License 2.0 / 0BSD, and pako, MIT/Zlib)</p>'
+      +'<p><b>fontkit (@pdf-lib/fontkit)</b> — Copyright (c) 2014-present Devon Govett and contributors — MIT License<br>https://github.com/Hopding/fontkit<br>(includes restructure, brotli, unicode-properties, unicode-trie, tiny-inflate, dfa, clone and pako, all MIT)</p>'
+      +'<p><b>Apache License, Version 2.0</b><br>Licensed under the Apache License, Version 2.0 (the “License”); you may not use these components except in compliance with the License. You may obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>'
+      +'<p><b>MIT License</b><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>'
+      +'</div>';
+    document.body.appendChild(o);
+    $('#abX').onclick=()=>o.remove();
+  }
   function drawSheet(){
     $('#mTabs').innerHTML=Object.keys(TABS).map(t=>'<button data-t="'+t+'"'+(t===tab?' class="on"':'')+'>'+t+'</button>').join('');
     const body=$('#mBody');
@@ -3523,7 +3557,9 @@ if(PWA){
       body.innerHTML='<div class="mzoom"><button class="btn" id="zM" aria-label="Zoom arrière">'+ICONS.minus+'</button><span class="zl" id="zL"></span><button class="btn" id="zP" aria-label="Zoom avant">'+ICONS.plus+'</button></div>'
         +'<div class="mgrid"><button id="zFit">'+ICONS.doc+'Ajuster à la page</button></div>'
         +'<div class="mrow"><label for="mPg">Aller à la page</label><input class="inp num" id="mPg" inputmode="numeric" style="width:84px"><span class="lbl" id="mPgT"></span></div>'
-        +'<div class="mrow"><label for="mTh">Thème</label><select class="inp" id="mTh"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>';
+        +'<div class="mrow"><label for="mTh">Thème</label><select class="inp" id="mTh"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>'
+        +'<div class="mgrid" style="grid-template-columns:1fr"><button id="mAboutB">'+ICONS.doc+'À propos, confidentialité et licences</button></div>';
+      $('#mAboutB').onclick=()=>{close();showAbout()};
       $('#zM').onclick=()=>click('#bZout');$('#zP').onclick=()=>click('#bZin');
       $('#zFit').onclick=()=>{click('#bFitP')};
       const pg=$('#mPg');pg.value=$('#pgIn').value;$('#mPgT').textContent=$('#pgTot').textContent;
@@ -3590,4 +3626,101 @@ if(PWA){
     syncSheet();
   },250);
 }
+})();
+
+/* ---------- i18n: French (source language) -> English, chosen from the phone's language or the Langue setting ---------- */
+(function(){
+  'use strict';
+  const KEY='letuspdf-lang';
+  let pref='auto';try{pref=localStorage.getItem(KEY)||'auto'}catch(e){}
+  const sys=((navigator.languages&&navigator.languages[0])||navigator.language||'fr').toLowerCase();
+  const LANG=pref==='fr'||pref==='en'?pref:(sys.indexOf('fr')===0?'fr':'en');
+  document.documentElement.lang=LANG;
+  const DICT={"Accueil": "Home", "Affiche le document deux fois, côte à côte, avec navigation et recherche indépendantes": "Shows the document twice, side by side, with independent navigation and search", "Ajouter du texte (T)": "Add text (T)", "Ajouter du texte, des images, des surlignages": "Add text, images, highlights", "Ajouter ou gérer des polices": "Add or manage fonts", "Ajouter une image (I)": "Add an image (I)", "Ajouter, modifier ou supprimer un commentaire (N)": "Add, edit or delete a comment (N)", "Ajouter, modifier ou supprimer un lien hypertexte (L)": "Add, edit or delete a hyperlink (L)", "Aller à la page": "Go to page", "Annuler": "Undo", "Annuler (Ctrl+Z)": "Undo (Ctrl+Z)", "Automatique": "Automatic", "Capture": "Capture", "Capture d'une zone du document (C)": "Capture an area of the document (C)", "Capture sélectionnée": "Capture selected", "Chargement…": "Loading…", "Choisir un PDF": "Choose a PDF", "Clair": "Light", "Coller les pages copiées après la page sélectionnée (Ctrl+V dans les miniatures)": "Paste the copied pages after the selected page (Ctrl+V in the thumbnails)", "Copier": "Copy", "Copier les pages sélectionnées (Ctrl+C dans les miniatures), pour les coller dans un autre onglet": "Copy the selected pages (Ctrl+C in the thumbnails) to paste them into another tab", "Descendre les pages sélectionnées": "Move the selected pages down", "Document": "Document", "Document protégé": "Protected document", "Documents ouverts": "Open documents", "Email": "Email", "Enregistrer": "Save", "Enregistrer (Ctrl+S)": "Save (Ctrl+S)", "Enregistrer sous": "Save as", "Enregistrer sous… (Ctrl+Maj+S)": "Save as… (Ctrl+Shift+S)", "Expression régulière": "Regular expression", "Expression régulière (équivalent des caractères génériques de Word)": "Regular expression (like Word's wildcards)", "Fermer": "Close", "Fermer (Échap)": "Close (Esc)", "Fermer ce document fera perdre les modifications en cours.": "Closing this document will discard your unsaved changes.", "Fermer sans enregistrer": "Close without saving", "Fonctions spéciales": "Special functions", "Fusionner": "Merge", "Fusionner : choisir un autre PDF et ajouter toutes ses pages à la fin de celui-ci": "Merge: pick another PDF and add all its pages at the end of this one", "Glissez un fichier ici ou choisissez-le sur votre appareil. Rien n'est envoyé : tout reste dans votre navigateur.": "Drop a file here or choose one on your device. Nothing is uploaded: everything stays on your device.", "Ignorer les accents (é = e)": "Ignore accents (é = e)", "Image": "Image", "Importer des fichiers…": "Import files…", "Insérer une page vide après": "Insert a blank page after", "Invoice → CN": "Invoice → CN", "Le PDF modifié ne peut incorporer que des polices dont le navigateur a le fichier. Ajoutez celles du document pour retrouver exactement le même rendu : les fichiers .ttf ou .otf se trouvent dans le dossier des polices de votre ordinateur. Sinon, la police standard la plus proche est utilisée.": "The edited PDF can only embed fonts whose file is available. Add the document's fonts to get exactly the same look: the .ttf or .otf files are in your computer's font folder. Otherwise the closest standard font is used.", "Le remplacement recouvre le texte d'origine et insère le nouveau (comme « Modifier le texte »). Un résultat réparti sur plusieurs lignes ne peut pas être remplacé.": "Replacing covers the original text and inserts the new one (like “Edit text”). A result spread over several lines cannot be replaced.", "Lecture": "Read", "Lien": "Link", "Lire et modifier un PDF": "Read and edit a PDF", "Menu": "Menu", "Miniatures": "Thumbnails", "Modifications non enregistrées": "Unsaved changes", "Modifier": "Edit", "Modifier le texte existant (E)": "Edit existing text (E)", "Modifier le texte existant d'un clic": "Edit existing text with a click", "Monter les pages sélectionnées": "Move the selected pages up", "Mot": "Word", "Mot de passe": "Password", "Mot entier": "Whole word", "Nom du fichier": "File name", "Note": "Note", "Options du texte": "Text options", "Outils": "Tools", "Ouvre le client e-mail avec le PDF actif en pièce jointe": "Opens your email app with the current PDF attached", "Ouvrir": "Open", "Page": "Page", "Page précédente": "Previous page", "Page suivante": "Next page", "Pages du document": "Document pages", "Parcourir…": "Browse…", "Pivoter les pages sélectionnées à droite": "Rotate the selected pages right", "Pivoter les pages sélectionnées à gauche": "Rotate the selected pages left", "Pivoter, déplacer, supprimer des pages": "Rotate, move, delete pages", "Plus": "More", "Polices": "Fonts", "Rechercher": "Search", "Rechercher (Ctrl+F)": "Search (Ctrl+F)", "Rechercher (deuxième vue)": "Search (second view)", "Rechercher (vue 2)": "Search (view 2)", "Rechercher dans le document": "Search the document", "Rechercher et remplacer": "Find and replace", "Rectangle": "Rectangle", "Rectangle ou masque (R)": "Rectangle or mask (R)", "Remplace Invoice par CreditNote, supprime la date limite et passe les montants en négatif": "Replaces Invoice with CreditNote, removes the due date and turns the amounts negative", "Remplacer": "Replace", "Remplacer par": "Replace with", "Respecter la casse": "Match case", "Rester ici": "Stay here", "Résultat précédent (Maj+Entrée)": "Previous result (Shift+Enter)", "Résultat suivant (Entrée)": "Next result (Enter)", "Résultats": "Results", "Résultats (vue 2)": "Results (view 2)", "Rétablir (Ctrl+Y)": "Redo (Ctrl+Y)", "Saisissez le mot de passe pour ouvrir ce PDF.": "Enter the password to open this PDF.", "Sombre": "Dark", "Spécial": "Special", "Stylo": "Pen", "Stylo (P)": "Pen (P)", "Supprimer les pages sélectionnées": "Delete the selected pages", "Surligner": "Highlight", "Surligner (H)": "Highlight (H)", "Sélection et lecture (V)": "Select and read (V)", "Texte": "Text", "Thème": "Theme", "Thème de l'interface": "Interface theme", "Tout remplacer": "Replace all", "Télécharger": "Download", "Utiliser les polices de l'ordinateur": "Use the computer's fonts", "Zoom arrière (Ctrl+-)": "Zoom out (Ctrl+-)", "Zoom avant (Ctrl++)": "Zoom in (Ctrl++)", "▸ Remplacer": "▸ Replace", "Fichier": "File", "Affichage": "View", "Pages": "Pages", "Page vide": "Blank page", "Pivoter à gauche": "Rotate left", "Pivoter à droite": "Rotate right", "Monter": "Move up", "Descendre": "Move down", "Coller": "Paste", "Supprimer": "Delete", "Ouvrir un PDF": "Open a PDF", "Partager / envoyer": "Share / send", "Enregistrer dans Fichiers": "Save to Files", "Rétablir": "Redo", "Ajuster à la page": "Fit to page", "Zoom arrière": "Zoom out", "Zoom avant": "Zoom in", "Choisir l'emplacement…": "Choose location…", "Ouvrir avec": "Open with", "Ouvrir avec…": "Open with…", "Application…": "Application…", "Auteur": "Author", "Utilisateur": "User", "Commentaire vide": "Empty comment", "Lien sans adresse": "Link without address", "Copier la page": "Copy page", "Copie…": "Copying…", "Capture…": "Capturing…", "Fusion…": "Merging…", "Remplacement…": "Replacing…", "Insertion de l'image…": "Inserting image…", "Préparation du fichier…": "Preparing file…", "Préparation de l'e-mail…": "Preparing email…", "Conversion en note de crédit…": "Converting to credit note…", "Lecture des polices…": "Reading fonts…", "Lecture des polices de l'ordinateur…": "Reading the computer's fonts…", "Aucun fichier récent": "No recent files", "Aucun résultat": "No results", "Aucun résultat.": "No results.", "Mot de passe incorrect": "Incorrect password", "Ouverture annulée.": "Opening cancelled.", "Zone trop petite.": "Area too small.", "Fichier enregistré.": "File saved.", "Image copiée dans le presse-papiers.": "Image copied to the clipboard.", "Rétablir l'original": "Restore original", "Supprimer ce commentaire": "Delete this comment", "Aller à la page liée": "Go to linked page", "Écrivez votre commentaire…": "Write your comment…", "Touchez un texte du document pour le modifier.": "Tap text in the document to edit it.", "Touchez la page à l'endroit où ajouter du texte.": "Tap the page where you want to add text.", "Touchez longuement un mot puis glissez pour surligner.": "Long-press a word, then drag to highlight.", "Faites glisser sur la page pour dessiner un rectangle.": "Drag on the page to draw a rectangle.", "Dessinez à main levée sur la page.": "Draw freehand on the page.", "Faites glisser sur la page pour capturer une zone en image.": "Drag on the page to capture an area as an image.", "Faites glisser sur la page pour créer un lien. Cliquez sur un lien existant pour le modifier ou le supprimer.": "Drag on the page to create a link. Tap an existing link to edit or delete it.", "Cliquez sur la page à l'endroit où ajouter un commentaire. Cliquez sur un commentaire existant pour le modifier ou le supprimer.": "Tap the page where you want to add a comment. Tap an existing comment to edit or delete it.", "Cliquez sur la page pour placer un commentaire.": "Tap the page to place a comment.", "Faites glisser sur la page pour créer un lien.": "Drag on the page to create a link.", "Impossible d'ouvrir ce fichier.": "Unable to open this file.", "Impossible d'ouvrir le sélecteur de fichier.": "Unable to open the file picker.", "Fichier introuvable : il a peut-être été déplacé ou supprimé.": "File not found: it may have been moved or deleted.", "Impossible de rouvrir ce fichier.": "Unable to reopen this file.", "Utilisez « Parcourir… » pour rouvrir ce fichier.": "Use “Browse…” to reopen this file.", "Autorisation refusée pour ce fichier.": "Permission denied for this file.", "Impossible de rouvrir ce fichier : il a peut-être été déplacé ou supprimé.": "Unable to reopen this file: it may have been moved or deleted.", "Impossible d'ouvrir ce fichier : est-il bien un PDF valide ?": "Unable to open this file: is it a valid PDF?", "Ouvrez un document avant d'activer la vue partagée.": "Open a document before turning on the split view.", "Vue partagée activée : chaque vue défile, zoome et recherche indépendamment.": "Split view on: each view scrolls, zooms and searches independently.", "Ce lien ne pointe vers rien de reconnu.": "This link doesn't point to anything recognised.", "Impossible de suivre ce lien.": "Unable to follow this link.", "Ce résultat ne peut pas être remplacé automatiquement (texte sur plusieurs lignes ou pivoté).": "This result can't be replaced automatically (multi-line or rotated text).", "La capture a échoué.": "The capture failed.", "Ce texte est pivoté : sa modification n'est pas prise en charge.": "This text is rotated: editing it is not supported.", "Impossible de charger le module de polices (connexion nécessaire).": "Unable to load the font module (connection needed).", "Aucune police valide trouvée (formats acceptés : .ttf et .otf).": "No valid font found (accepted formats: .ttf and .otf).", "Cette fonction n'est pas disponible dans ce navigateur.": "This feature isn't available in this browser.", "Import déjà en cours, merci de patienter…": "Import already in progress, please wait…", "Accès aux polices refusé ou indisponible dans cette vue. Importez plutôt les fichiers de police.": "Font access denied or unavailable here. Import the font files instead.", "Ce PDF est protégé par un mot de passe : il ne peut pas être modifié.": "This PDF is password-protected: it can't be edited.", "Ce PDF est protégé par un mot de passe : il peut être lu, mais pas enregistré après modification.": "This PDF is password-protected: it can be read, but not saved after editing.", "Ce PDF est protégé par un mot de passe : il peut être lu, mais pas réenregistré pour l'envoyer.": "This PDF is password-protected: it can be read, but not saved again to send it.", "Ce PDF est chiffré : ses liens et commentaires existants peuvent être suivis mais pas modifiés.": "This PDF is encrypted: its existing links and comments can be followed but not edited.", "Les PDF protégés par mot de passe ne peuvent pas être modifiés.": "Password-protected PDFs can't be edited.", "Les PDF protégés par mot de passe ne peuvent pas être copiés.": "Password-protected PDFs can't be copied.", "Les liens ou commentaires existants de ce PDF ne peuvent pas être modifiés (structure du fichier non lisible).": "The existing links or comments in this PDF can't be edited (unreadable file structure).", "La conversion a échoué": "The conversion failed", "Rien à convertir : aucun texte « Invoice » ni montant reconnu dans ce document.": "Nothing to convert: no “Invoice” text or amount found in this document.", "Ouvrez d'abord un PDF.": "Open a PDF first.", "Ce fichier n'est pas une image.": "This file isn't an image.", "Impossible d'insérer cette image.": "Unable to insert this image.", "Ce fichier n'est pas un PDF.": "This file isn't a PDF.", "La copie a échoué : votre navigateur ne le permet peut-être pas ici.": "Copy failed: your browser may not allow it here.", "Le téléchargement a échoué.": "The download failed.", "Impossible d'ouvrir ce lien.": "Unable to open this link.", "Ce lien n'a pas encore d'adresse.": "This link has no address yet.", "Une police ajoutée n'a pas pu être incorporée : la police standard la plus proche a été utilisée.": "An added font couldn't be embedded: the closest standard font was used.", "L'enregistrement n'est pas disponible dans cette vue.": "Saving isn't available in this view.", "Une demande d'enregistrement est déjà ouverte.": "A save request is already open.", "L'enregistrement a échoué.": "Saving failed.", "L'envoi par e-mail n'est pas disponible dans cette vue.": "Sending by email isn't available in this view.", "L'envoi par e-mail a échoué.": "Sending by email failed.", "Impossible de supprimer toutes les pages.": "Can't delete all the pages.", "Cette opération a échoué.": "This operation failed.", "Ce fichier n'est pas un PDF valide, ou il est protégé par mot de passe.": "This file isn't a valid PDF, or it is password-protected.", "Ce PDF ne contient aucune page.": "This PDF has no pages.", "La copie a échoué.": "Copy failed.", "Aucune page copiée : utilisez d'abord « Copier » sur une page.": "No pages copied: use “Copy” on a page first.", "Ouvrez un PDF pour le lire et le modifier. Rien n'est envoyé : tout reste sur votre appareil.": "Open a PDF to read and edit it. Nothing is uploaded: everything stays on your device.", "Retour au document": "Back to document", "Fermer ce document": "Close this document", "Fermer l'onglet": "Close tab", "Le sélecteur de fichiers de l'iPhone s'ouvre : choisissez le dossier (iCloud Drive, Sur mon iPhone, OneDrive…).": "The iPhone file picker opens: choose a folder (iCloud Drive, On My iPhone, OneDrive…).", "« Choisir l'emplacement » ouvre le menu du téléphone : choisissez Enregistrer dans Fichiers (iPhone) ou votre application de stockage (Android).": "“Choose location” opens the phone menu: choose Save to Files (iPhone) or your storage app (Android).", "Ajuster": "Fit", "Adresse web": "Web address", "Page du document": "Document page", "Tester": "Test", "Dupliquer": "Duplicate", "Gras": "Bold", "Italique": "Italic", "Police": "Font", "Taille": "Size", "Couleur": "Color", "Épaisseur": "Thickness", "Contour": "Outline", "Remplissage": "Fill", "Type de lien": "Link type", "Adresse du lien": "Link address", "Couleur de remplissage": "Fill color", "Couleur du contour": "Outline color", "Couleur du stylo": "Pen color", "Couleur du surlignage": "Highlight color", "Couleur du texte": "Text color", "Numéro de page": "Page number", "Épaisseur du contour": "Outline thickness", "Épaisseur du trait": "Stroke thickness", "Supprimer (Suppr)": "Delete (Del)", "Tester le lien": "Test link", "https://exemple.com ou adresse e-mail": "https://example.com or email address", "Aa": "Aa", "Langue": "Language", "Choisir la langue": "Choose language", "Écriture directe impossible, nouvelle tentative via le dialogue du système.": "Direct writing isn't possible, trying again through the system dialog.", "Pour installer : touchez": "To install: tap", "Partager": "Share", "puis": "then", "Sur l'écran d'accueil": "Add to Home Screen", "Aucune police ajoutée. Les polices standard (Helvetica, Times, Courier) sont toujours disponibles.": "No fonts added. The standard fonts (Helvetica, Times, Courier) are always available.", "Les polices ajoutées sont conservées sur cet appareil (hors connexion aussi).": "Added fonts are kept on this device (offline too).", "À propos, confidentialité et licences": "About, privacy and licenses", "Politique de confidentialité": "Privacy policy", "Aide et contact": "Help and contact", "Licences / Open-source licenses": "Open-source licenses", "Lire et modifier un PDF. Rien n'est envoyé : tout reste sur votre appareil.": "Read and edit a PDF. Nothing is uploaded: everything stays on your device.", "Rien n'est envoyé : tout reste sur votre appareil.": "Nothing is uploaded: everything stays on your device.", "Partager…": "Share…", "Enregistrer le fichier": "Save file", "Licences": "Licenses", "Licences des composants open source": "Open-source component licenses", "À propos": "About", "Confidentialité": "Privacy"};
+  const FRAG=[["). Si cela persiste après avoir ouvert plusieurs documents, fermez quelques onglets ou redémarrez l'application.", "). If this persists after opening several documents, close a few tabs or restart the app."], [" autres résultats : affinez la recherche pour les lister. Les boutons ↑ ↓ les parcourent tous.", " more results: refine the search to list them. The ↑ ↓ buttons step through all of them."], ["(ATTENTION : non conservée(s) au redémarrage, voir message ci-dessus)", "(WARNING: not kept after restart, see message above)"], [" ne sera pas retrouvée au redémarrage (serveur local inaccessible : ", " won't be found after restart (local server unreachable: "], [" ne sera pas retrouvée au redémarrage (enregistrement refusé : ", " won't be found after restart (saving refused: "], [" autres résultats : affinez la recherche pour les lister.", " more results: refine the search to list them."], [". Ouvrez l'autre document puis cliquez sur « Coller ».", ". Open the other document, then tap “Paste”."], ["Ajoutez une police complète pour les conserver.", "Add a complete font to keep them."], [" ne sera pas conservée sur cet appareil (", " won't be kept on this device ("], ["Impossible d'ouvrir le client e-mail : ", "Unable to open the email app: "], [" (texte sur plusieurs lignes ou pivoté)", " (multi-line or rotated text)"], ["Impossible d'ouvrir ce fichier (", "Unable to open this file ("], ["Impossible de générer le PDF : ", "Unable to generate the PDF: "], ["non conservée(s) au redémarrage", "not kept after restart"], ["lecture du contenu impossible", "content can't be read"], [" de l'ordinateur disponibles", " from the computer available"], [" de l'ordinateur disponible", " from the computer available"], ["conservée(s) au redémarrage", "kept after restart"], ["La conversion a échoué : ", "The conversion failed: "], ["conservées au redémarrage", "kept after restart"], ["conservée au redémarrage", "kept after restart"], ["Enregistrées dans : ", "Saved in: "], ["Police d'origine : ", "Original font: "], ["Aller à la page ", "Go to page "], [" ligne supprimée", " line removed"], ["erreur inconnue", "unknown error"], ["Invoice → CN : ", "Invoice → CN: "], ["Introuvable : ", "Not found: "], ["Remplacée par ", "Replaced by "], ["« CreditNote »", "“CreditNote”"], [" ne sera pas", " won't be"], [" en négatif", " made negative"], ["« Date »", "“Date”"], [" copiée", " copied"], ["Page ", "Page "]];
+  const nrm=s=>s.replace(/’/g,"'").replace(/[  ]/g,' ').replace(/\s+/g,' ').trim();
+  const pl=(n,a,b)=>n>1?b:a;
+  const PAT=[
+    [/^(\d+) remplacements? effectués?(?: · (\d+) ignorés? \(texte sur plusieurs lignes ou pivoté\))?\.$/,(m)=>m[1]+' replacement'+pl(+m[1],'','s')+' made'+(m[2]?' · '+m[2]+' skipped (multi-line or rotated text)':'')+'.'],
+    [/^(\d+) polices? ajoutées?(.*)$/,(m)=>m[1]+' font'+pl(+m[1],'','s')+' added'+fr(m[2])],
+    [/^(\d+) polices? de l'ordinateur disponibles?(.*)$/,(m)=>m[1]+' font'+pl(+m[1],'','s')+' from the computer available'+fr(m[2])],
+    [/^(\d+) caractères? non pris en charge par la police (?:ont|a) été remplacés?\. Ajoutez une police complète pour les conserver\.$/,(m)=>m[1]+' character'+pl(+m[1],'','s')+' not supported by the font '+pl(+m[1],'was','were')+' replaced. Add a complete font to keep them.'],
+    [/^(\d+) pages? (ajoutées?|collées?|insérées?|dupliquées?)\.$/,(m)=>m[1]+' page'+pl(+m[1],'','s')+' '+({a:'added',c:'pasted',i:'inserted',d:'duplicated'})[m[2][0]]+'.'],
+    [/^(\d+) pages copiées\. Ouvrez l'autre document puis cliquez sur « Coller »\.$/,(m)=>m[1]+' pages copied. Open the other document, then tap “Paste”.'],
+    [/^Page (\d+) copiée\. Ouvrez l'autre document puis cliquez sur « Coller »\.$/,(m)=>'Page '+m[1]+' copied. Open the other document, then tap “Paste”.'],
+    [/^Invoice → CN : (\d+) « CreditNote », (\d+) « Date », (\d+) ligne supprimée, (\d+) montants? passés? en négatif\.$/,(m)=>'Invoice → CN: '+m[1]+' “CreditNote”, '+m[2]+' “Date”, '+m[3]+' line removed, '+m[4]+' amount'+pl(+m[4],'','s')+' made negative.'],
+    [/^Page (\d+) · (\d+) résultats?$/,(m)=>'Page '+m[1]+' · '+m[2]+' result'+pl(+m[2],'','s')],
+    [/^Le client e-mail s'ouvre avec « (.+) » en pièce jointe\.$/,(m)=>'The email app opens with “'+m[1]+'” attached.'],
+    [/^« (.+) » téléchargé : joignez-le au brouillon qui vient de s'ouvrir\.$/,(m)=>'“'+m[1]+'” downloaded: attach it to the draft that just opened.'],
+    [/^« (.+) » contient des modifications non enregistrées\. Les fermer les fera perdre\.$/,(m)=>'“'+m[1]+'” has unsaved changes. Closing will discard them.'],
+    [/^(\d+) documents? contien(?:nen|)t des modifications non enregistrées\.?(.*)$/,(m)=>m[1]+' document'+pl(+m[1],' has',' have')+' unsaved changes.'+fr(m[2])],
+  ];
+  function fr(s){return s?frag(s):''}
+  function frag(s){let out=s,hit=false;for(const [a,b] of FRAG){if(out.indexOf(a)>=0){out=out.split(a).join(b);hit=true}}return out}
+  function tr(s){
+    if(LANG==='fr'||!s)return s;
+    const core=nrm(s);if(!core)return s;
+    let r=DICT[core];
+    if(r===undefined){for(const [re,fn] of PAT){const m=re.exec(core);if(m){r=fn(m);break}}}
+    if(r===undefined&&/[a-zà-ÿ]/i.test(core)){const f=frag(core);if(f!==core)r=f}
+    if(r===undefined)return s;
+    const a=/^\s*/.exec(s)[0],b=/\s*$/.exec(s)[0];
+    return a+r+b;
+  }
+  window.__tr=tr;window.__lang=LANG;
+  /* a few things that were compared with the French text */
+  if(LANG!=='fr'){
+    for(const f of ['alert','confirm','prompt']){const o=window[f];if(o)window[f]=function(m,d){return o.call(window,tr(String(m)),d)}}
+  }
+  const SKIP='#pages,#pages2,#thumbs,#thumbs2,script,style,textarea,[contenteditable="true"],[contenteditable="plaintext-only"]';
+  const skip=el=>!el||(el.closest&&el.closest(SKIP));
+  const ATTRS=['title','placeholder','aria-label','alt'];
+  function doText(t){const p=t.parentElement;if(skip(p))return;const v=t.nodeValue;if(!v||!v.trim())return;let r=tr(v);if(nrm(v)==='Annuler'&&p.closest('.box,#modal,#modal2,#modal3,#modal4'))r=v.replace('Annuler','Cancel');if(r!==v)t.nodeValue=r}
+  function doEl(el){
+    if(el.nodeType!==1||skip(el))return;
+    for(const a of ATTRS){const v=el.getAttribute(a);if(v){const r=tr(v);if(r!==v)el.setAttribute(a,r)}}
+  }
+  function walk(root){
+    if(root.nodeType===3){doText(root);return}
+    if(root.nodeType!==1||skip(root))return;
+    doEl(root);
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
+    let n;while((n=w.nextNode())){if(n.nodeType===3)doText(n);else if(n.closest&&n.closest(SKIP))continue;else doEl(n)}
+  }
+  function langRows(){
+    const mk=(id,cls)=>{const s=document.createElement('select');s.id=id;s.className=cls;
+      s.innerHTML='<option value="auto">Auto</option><option value="fr">Français</option><option value="en">English</option>';
+      s.value=pref;s.setAttribute('aria-label',LANG==='fr'?'Langue':'Language');
+      s.onchange=()=>{try{localStorage.setItem(KEY,s.value)}catch(e){}
+        const open=document.querySelector('#pages .page,#pages .pg,#pages>*');
+        if(open&&typeof window.__toast==='function'){window.__toast(s.value==='fr'||(s.value==='auto'&&sys.indexOf('fr')===0)?'La langue changera au prochain lancement.':'The language will change the next time you open the app.');}
+        else location.reload()};
+      return s};
+    const th=document.getElementById('mTh');
+    if(th&&!document.getElementById('mLang')){
+      const row=document.createElement('div');row.className='mrow';
+      const l=document.createElement('label');l.htmlFor='mLang';l.textContent=LANG==='fr'?'Langue':'Language';
+      row.appendChild(l);row.appendChild(mk('mLang','inp'));th.parentElement.insertAdjacentElement('afterend',row);
+    }
+    const ts=document.getElementById('themeSel');
+    if(ts&&!document.getElementById('langSel')){
+      const lab=ts.closest('label');const s=mk('langSel','inp');s.style.marginLeft='6px';
+      (lab||ts).insertAdjacentElement('afterend',s);
+    }
+  }
+  const mo=new MutationObserver(recs=>{
+    if(LANG!=='fr')for(const r of recs){
+      if(r.type==='characterData')doText(r.target);
+      else if(r.type==='attributes')doEl(r.target);
+      else r.addedNodes.forEach(walk);
+    }
+    langRows();
+    mo.takeRecords();
+  });
+  function start(){
+    if(LANG!=='fr'){walk(document.body);document.title=tr(document.title)}
+    langRows();
+    mo.observe(document.body,LANG!=='fr'?{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:ATTRS}:{subtree:true,childList:true});
+  }
+  start();
 })();
