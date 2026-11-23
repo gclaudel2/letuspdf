@@ -657,7 +657,7 @@ function getGroups(pg){
       if(!(size>0.5))continue;
       const st=tc.styles[it.fontName]||{};
       const cur={str:it.str,x:tx[4],y:tx[5],w:it.width,size,ang:Math.atan2(tx[1],tx[0]),font:it.fontName,
-        asc:clamp(st.ascent!=null?st.ascent:0.85,0.6,1.1),desc:clamp(st.descent!=null?st.descent:-0.2,-0.4,-0.05),
+        asc:clamp(Number.isFinite(st.ascent)?st.ascent:0.85,0.6,1.1),desc:clamp(Number.isFinite(st.descent)?st.descent:-0.2,-0.4,-0.05), /* Type 3 fonts (e.g. PDFs saved from Chrome) report no ascent/descent */
         kind:kindFrom('',st.fontFamily),bold:false,italic:false};
       if(prev&&Math.abs(cur.ang)<1e-3&&Math.abs(prev.ang)<1e-3&&cur.font===prev.font&&
          Math.abs(size-prev.size)<0.6&&Math.abs(cur.y-prev.y)<0.25*size){
@@ -3465,7 +3465,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v16';
+  const APP_VER='v17';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
