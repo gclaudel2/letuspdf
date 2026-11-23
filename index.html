@@ -286,8 +286,9 @@ html.phone #mbar .mt:active{background:color-mix(in srgb,var(--accent) 20%,trans
 html.phone .ioshint{bottom:calc(76px + env(safe-area-inset-bottom))}
 html.phone #msheet{display:block;position:fixed;inset:0;z-index:40}
 html.phone #msheet[hidden]{display:none}
+html.phone #mhead.nodoc #mSave,html.phone #mhead.nodoc .mpg{display:none}
 html.phone .mback{position:absolute;inset:0;background:rgba(10,14,22,.45)}
-html.phone .mpanel{position:absolute;left:0;right:0;bottom:0;max-height:78dvh;display:flex;flex-direction:column;background:var(--panel2);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding-bottom:env(safe-area-inset-bottom)}
+html.phone .mpanel{position:absolute;left:0;right:0;bottom:0;max-height:78dvh;min-height:min(430px,78dvh);display:flex;flex-direction:column;background:var(--panel2);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding-bottom:env(safe-area-inset-bottom)}
 html.phone .mgrip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 4px;flex:none}
 html.phone .mtabs{display:flex;gap:4px;padding:4px 12px 8px;flex:none}
 html.phone .mtabs button{flex:1;height:38px;border:0;border-radius:10px;background:none;color:var(--muted);font:600 14px var(--font)}

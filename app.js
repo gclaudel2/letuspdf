@@ -3474,8 +3474,8 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v19';
-  const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
+  const APP_VER='v20';
+  const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
   $$('#mhead [data-i],#mbar [data-i]').forEach(e=>{e.innerHTML=ICONS[e.dataset.i]||''});
@@ -3632,7 +3632,7 @@ if(PWA){
     const more=!['sel','edit','text','image'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
     for(const [a,b2] of [['#mSave','#bSave']])q(a).disabled=!!q(b2).disabled;
     const tx=!!q('#propbar [data-k="kind"]')&&!q('#propbar').hidden;root.classList.toggle('tx',tx);if(!tx)root.classList.remove('fmt');else if(!root.classList.contains('fmtTop')&&!root.classList.contains('fmtBot'))placeFmt();
-    const has=S.pdf;mh.hidden=!has;if(!has&&!home.hidden)closeHome();
+    const has=S.pdf;mh.hidden=!has;$('#mhead').classList.toggle('nodoc',!has);if(!has&&!home.hidden)closeHome();
     $('#mTitle').textContent=has?(S.name||'Document')+(S.dirty?' •':''):'Let Us PDF';
     $('#mSub').textContent=has?$('#pgIn').value+' '+$('#pgTot').textContent:'—';
     syncSheet();
