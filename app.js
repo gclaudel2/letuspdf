@@ -2853,7 +2853,14 @@ function createNote(pg,pt){
   S.annots.push(a);pushHist();
   setTool('sel');
   renderOne(a);selectAnn(a.id);
-  setTimeout(()=>{const ta=pg.al.querySelector('[data-cid="'+a.id+'"] textarea');if(ta)ta.focus()},30);
+  /* iOS only raises the keyboard for a focus() made inside a user gesture: focus now, and again on the finger-up / click that ends this tap */
+  const foc=()=>{const ta=pg.al.querySelector('[data-cid="'+a.id+'"] textarea');if(ta&&document.activeElement!==ta){try{ta.focus({preventScroll:true})}catch(_){ta.focus()}}};
+  foc();
+  const evs=['pointerup','touchend','mouseup','click'];
+  const off=()=>{evs.forEach(ev=>window.removeEventListener(ev,once,true));clearTimeout(tm)};
+  const once=()=>{foc();off()};
+  const tm=setTimeout(off,1200);
+  evs.forEach(ev=>window.addEventListener(ev,once,true));
 }
 function drawLink(pg,e){
   const p0=ptOf(pg,e);
@@ -3465,7 +3472,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v17';
+  const APP_VER='v18';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3485,6 +3492,8 @@ if(PWA){
   if(vv){vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync)}
   document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
   document.addEventListener('focusout',()=>setTimeout(kbSync,150));
+  /* tapping outside an edited field: drop its focus first (a focused element that gets removed never fires blur on iOS, which left the app stuck in "keyboard" layout) */
+  document.addEventListener('pointerdown',e=>{const a=document.activeElement;if(a&&isEd(a)&&!a.contains(e.target)&&a.closest('.note-pop')&&e.target.closest&&e.target.closest('#pages')&&!e.target.closest('.note-pop'))a.blur();setTimeout(kbSync,60);setTimeout(kbSync,350)},true);
   /* keep the text being edited visible between the floating tool panel (top) and the keyboard */
   /* floating "Aa" button + options panel: placed on the side opposite to the text being edited */
   const fmtEl=()=>{const a=document.activeElement;if(a&&a.isContentEditable)return a;return document.querySelector('#pages .a.sel,#pages .a-edit.sel')};
@@ -3615,6 +3624,7 @@ if(PWA){
   /* keep header / bar in step with the (hidden) desktop controls */
   setInterval(()=>{
     if(!root.classList.contains('phone'))return;
+    kbSync();
     const on=t=>toolOn('[data-tool="'+t+'"]');
     $$('#mbar [data-mt]').forEach(b=>b.classList.toggle('on',on(b.dataset.mt)));
     const more=!['sel','edit','text','image'].some(on);$('#mMore').classList.toggle('on',more||sheetOpen);
