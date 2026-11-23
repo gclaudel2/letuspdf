@@ -307,6 +307,7 @@ html.phone .mzoom .zl{flex:1;text-align:center;font-weight:600}
 html.phone .mzoom .btn{height:46px;min-width:56px}
 .savebox .row{display:flex;gap:8px;flex-wrap:wrap}.savebox .btn{flex:1;min-height:46px;justify-content:center}.savebox small{color:var(--muted);line-height:1.4}
 .ioshint{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);font-size:14px}
+.only-p{display:none}.phone .only-p{display:inline}.phone .only-d{display:none}
 </style>
 
 </head><body>
@@ -373,7 +374,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
         <div class="empty" id="empty">
           <div class="drop" id="drop">
             <h1>Lire et modifier un PDF</h1>
-            <p>Glissez un fichier ici ou choisissez-le sur votre appareil. Rien n'est envoyé : tout reste dans votre navigateur.</p>
+            <p><span class="only-d">Glissez un fichier ici ou choisissez-le sur votre appareil. Rien n'est envoyé : tout reste dans votre navigateur.</span><span class="only-p">Ouvrez un PDF de votre appareil. Rien n'est envoyé.</span></p>
             <button class="btn primary" id="bOpen2"><span data-i="open"></span>Choisir un PDF</button>
             <ul><li>Modifier le texte existant d'un clic</li><li>Ajouter du texte, des images, des surlignages</li><li>Pivoter, déplacer, supprimer des pages</li></ul>
           </div>
