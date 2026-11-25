@@ -241,6 +241,7 @@ html.phone #mhead .mtitle svg{width:20px;height:20px;flex:none;stroke:currentCol
 html.phone #mhead .mtt{display:flex;flex-direction:column;min-width:0;align-items:flex-start}
 html.phone #mhead .mtt i{font:normal 500 9px/1 var(--font);color:var(--muted);margin-top:2px;letter-spacing:.3px}
 html.phone.kb #mbar,html.phone.kb .ioshint{display:none!important}
+html.phone #thumbs:not([hidden]){display:flex;position:fixed;left:0;top:var(--hh,60px);bottom:calc(62px + env(safe-area-inset-bottom,0px));width:142px;z-index:34;box-shadow:4px 0 16px rgba(0,0,0,.25);padding-top:10px}
 html.kb #viewer{padding-bottom:calc(var(--kb,0px) + 110px)}
 html.phone.kb:not(.tx) #propbar,html.phone.kb #search,html.phone.kb #search2{position:fixed!important;top:var(--ptop,66px)!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:calc(100% - 16px)!important;max-width:none!important;z-index:45;border:1px solid var(--line);border-radius:12px}
 html.phone.kb #search,html.phone.kb #search2{max-height:45dvh;overflow:auto}

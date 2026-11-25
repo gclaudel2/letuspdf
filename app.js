@@ -716,7 +716,7 @@ let tio=null,tq=[],tbusy=false;
 function buildThumbs(){
   const box=$('#thumbs');box.innerHTML='';
   if(tio)tio.disconnect();tq=[];
-  if(S.thumbsOpen===undefined)S.thumbsOpen=innerWidth>700;
+  if(S.thumbsOpen===undefined)S.thumbsOpen=innerWidth>700&&!document.documentElement.classList.contains('phone');
   box.hidden=!S.thumbsOpen;$('#bThumbs').classList.toggle('on',S.thumbsOpen);
   tio=new IntersectionObserver(es=>{
     for(const e of es)if(e.isIntersecting){tio.unobserve(e.target);tq.push(S.pages[+e.target.dataset.n-1])}
@@ -3475,7 +3475,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v24';
+  const APP_VER='v25';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3496,6 +3496,8 @@ if(PWA){
   if(vv){vv.addEventListener('resize',()=>{kbSync();revSoon()});vv.addEventListener('scroll',kbSync)}
   document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
   document.addEventListener('focusout',()=>setTimeout(kbSync,150));
+  /* phone: the page list is a drawer over the document; a tap on the document closes it */
+  viewer.addEventListener('pointerdown',()=>{if(root.classList.contains('phone')&&S.thumbsOpen){S.thumbsOpen=false;$('#thumbs').hidden=true;$('#bThumbs').classList.remove('on')}},true);
   /* tapping outside an edited field: drop its focus first (a focused element that gets removed never fires blur on iOS, which left the app stuck in "keyboard" layout) */
   document.addEventListener('pointerdown',e=>{const a=document.activeElement;if(a&&isEd(a)&&!a.contains(e.target)&&a.closest('.note-pop')&&e.target.closest&&e.target.closest('#pages')&&!e.target.closest('.note-pop'))a.blur();setTimeout(kbSync,60);setTimeout(kbSync,350)},true);
   /* keep the text being edited visible between the floating tool panel (top) and the keyboard */
