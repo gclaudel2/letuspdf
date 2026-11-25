@@ -203,9 +203,13 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:1000px){#bSave .hide-s2{display:none}#bSave{padding:0 9px}}
 @media (max-width:700px){#search,#search2{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:55%;z-index:20;border-left:0;border-top:1px solid var(--line);box-shadow:var(--shadow)}#propbar .chip{display:none}#thumbs{display:none}.hide-s{display:none}#viewer,#viewer2{padding:10px 8px}#stage2{display:none!important}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
-.themesel{margin-left:auto;display:flex;align-items:center;gap:6px;padding-left:8px;color:var(--muted)}
-.themesel svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.themesel select{height:30px}
+.themesel{margin-left:auto}
+#setMenu{position:fixed;z-index:40;width:270px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px}
+#setMenu[hidden]{display:none!important}
+#setMenu .smh{font-weight:600;margin-bottom:8px}
+#setMenu .srow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0}
+#setMenu .srow label{color:var(--muted)}
+#setMenu select{height:30px;min-width:130px}
 #fnList{display:grid;gap:4px;max-height:180px;overflow:auto;font-size:13px}
 #fnList div{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--line);border-radius:6px}
 #fnList small{color:var(--muted)}
@@ -352,8 +356,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
     <button class="btn icon" id="bCopyPg" title="Copier les pages sélectionnées (Ctrl+C dans les miniatures), pour les coller dans un autre onglet" data-i="dup" disabled></button>
     <button class="btn icon" id="bPastePg" title="Coller les pages copiées après la page sélectionnée (Ctrl+V dans les miniatures)" data-i="paste" disabled></button>
     <button class="btn icon mob-only" id="bDelPg" title="Supprimer les pages sélectionnées" data-i="trash"></button>
-    <label class="themesel" title="Thème de l'interface"><span data-i="theme"></span>
-      <select class="inp" id="themeSel" aria-label="Thème"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+    <button class="btn icon themesel" id="bSettings" title="Réglages" aria-haspopup="dialog" data-i="gear"></button>
   </div>
   <div class="bar" id="tools" role="toolbar" aria-label="Outils">
     <button class="btn on" data-tool="sel" title="Sélection et lecture (V)"><span data-i="cursor"></span><span class="hide-m">Lecture</span></button>
@@ -433,6 +436,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
   <button class="mi" role="menuitem" data-sp="split" title="Affiche le document deux fois, côte à côte, avec navigation et recherche indépendantes">Split view</button>
   <button class="mi" role="menuitem" data-sp="email" title="Ouvre le client e-mail avec le PDF actif en pièce jointe">Email</button>
 </div>
+<div id="setMenu" hidden role="dialog" aria-label="Réglages"><div class="smh">Réglages</div><div class="srow"><label for="themeSel">Thème</label><select class="inp" id="themeSel" aria-label="Thème"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div></div>
 <div id="openMenu" hidden role="menu">
   <button class="mi" role="menuitem" data-om="browse"><span data-i="open"></span>Parcourir…</button>
   <div class="mi-sep"></div>
