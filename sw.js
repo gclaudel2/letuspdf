@@ -1,5 +1,5 @@
 /* Let Us PDF - service worker: works offline once visited, and receives files shared from other apps (Android) */
-const VERSION = 'v23';
+const VERSION='v24';
 const CACHE = 'letuspdf-' + VERSION;
 const SHARE = 'letuspdf-share';
 const ASSETS = [

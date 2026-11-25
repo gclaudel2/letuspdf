@@ -3475,7 +3475,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v23';
+  const APP_VER='v24';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3492,7 +3492,8 @@ if(PWA){
     root.classList.toggle('kb',kb>80||isEd(document.activeElement));
     if(window.scrollY)window.scrollTo(0,0);
   };
-  if(vv){vv.addEventListener('resize',kbSync);vv.addEventListener('scroll',kbSync)}
+  let rvT;const revSoon=()=>{clearTimeout(rvT);rvT=setTimeout(()=>{try{revealEdit()}catch(_){}},140)};
+  if(vv){vv.addEventListener('resize',()=>{kbSync();revSoon()});vv.addEventListener('scroll',kbSync)}
   document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
   document.addEventListener('focusout',()=>setTimeout(kbSync,150));
   /* tapping outside an edited field: drop its focus first (a focused element that gets removed never fires blur on iOS, which left the app stuck in "keyboard" layout) */
@@ -3507,13 +3508,17 @@ if(PWA){
     root.classList.toggle('fmtTop',atTop);root.classList.toggle('fmtBot',!atTop);
   }
   function revealEdit(){
-    const el=document.activeElement;if(!el||!el.isContentEditable)return;
-    placeFmt();
+    const ae=document.activeElement;if(!ae||!isEd(ae))return;
+    const isCE=ae.isContentEditable,np=!isCE&&ae.closest&&ae.closest('#pages');
+    if(!isCE&&!np)return;
+    const el=isCE?ae:(ae.closest('.note-pop')||ae);
+    if(isCE)placeFmt();
     const pb=$('#propbar'),v=$('#viewer');
     let top=$('#mhead').getBoundingClientRect().bottom+10,bot=(vv?vv.offsetTop+vv.height:innerHeight)-60;
-    if(root.classList.contains('fmt')){const r=pb.getBoundingClientRect();if(root.classList.contains('fmtTop'))top=Math.max(top,r.bottom+10);else bot=Math.min(bot,r.top-10)}
+    if(isCE&&root.classList.contains('fmt')){const r=pb.getBoundingClientRect();if(root.classList.contains('fmtTop'))top=Math.max(top,r.bottom+10);else bot=Math.min(bot,r.top-10)}
     const r=el.getBoundingClientRect();
     if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
+    if(!isCE)return;
     const sel=getSelection();
     if(sel.rangeCount){const cr=sel.getRangeAt(0).getClientRects()[0];const vr=v.getBoundingClientRect();
       if(cr&&cr.height){if(cr.left<vr.left+12)v.scrollLeft-=vr.left+12-cr.left;else if(cr.right>vr.right-12)v.scrollLeft+=cr.right-vr.right+12}}
