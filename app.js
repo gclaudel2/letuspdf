@@ -3474,12 +3474,12 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v21';
+  const APP_VER='v22';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
   $$('#mhead [data-i],#mbar [data-i]').forEach(e=>{e.innerHTML=ICONS[e.dataset.i]||''});
-  $('#mVer').textContent=APP_VER;
+  {const hv=$('#homeVer');if(hv)hv.textContent='Let Us PDF · '+APP_VER}
   /* iOS keyboard: it overlays the fixed layout, so lift floating panels above it */
   const vv=window.visualViewport;
   const isEd=e=>e&&(e.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName))&&!e.closest('#modal,#modal2,#modal3,#modal4,#msheet');
