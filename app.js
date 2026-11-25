@@ -272,6 +272,7 @@ async function loadBytes(bytes,name,keepPage,keepAnnots){
     if(!keepPage){S.dirty=false}
     $('#empty').hidden=true;
     if(!keepPage)S.zoom=fitWidthValue(pages[0],1.5);
+    if(!keepPage){const z0=S.zoom;[250,700].forEach(ms=>setTimeout(()=>{if(S.pages===pages&&Math.abs(S.zoom-z0)<1e-6){const z=fitWidthValue(pages[0],1.5);if(Math.abs(z-z0)>0.01){setZoom(z,true);S.zoom=z;}}},ms));}
     S.cur=keepPage||1;
     buildPages();buildThumbs();renderAllAnnots();
     goto(keepPage||1);
@@ -3474,7 +3475,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v22';
+  const APP_VER='v23';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
