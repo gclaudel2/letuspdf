@@ -2851,11 +2851,25 @@ function notePop(a,pg){
   p.addEventListener('pointerdown',e=>e.stopPropagation());
   return p;
 }
+/* a freshly dropped note: when its yellow panel would not fit on screen (zoomed document), zoom out until it does, then bring it into view */
+function fitNote(pg,a){
+  const pop=pg.al.querySelector('[data-cid="'+a.id+'"]');if(!pop)return;
+  const z=S.zoom,r=pop.getBoundingClientRect();if(!r.width||!z)return;
+  const wU=r.width/z,hU=r.height/z,vr=viewer.getBoundingClientRect();
+  const kb=COARSE?Math.round(innerHeight*0.42):0;
+  const pbH=COARSE?64:0,availW=vr.width-16,availH=Math.max(160,Math.min(vr.height,innerHeight-vr.top-kb)-16-pbH);
+  const nz=Math.min(z,availW/wU,availH/hU);
+  if(nz<z-0.01){setZoom(Math.max(0.25,nz),true)}
+  const r2=pop.getBoundingClientRect();
+  if(r2.width<=availW)viewer.scrollLeft+=r2.left-(vr.left+(vr.width-r2.width)/2);
+  viewer.scrollTop+=r2.top-(vr.top+8+pbH);
+}
 function createNote(pg,pt){
   const a={id:uid(),type:'note',n:pg.n,x:clamp(pt.x-NOTE_SIZE/2,0,pg.w-NOTE_SIZE),y:clamp(pt.y-NOTE_SIZE/2,0,pg.h-NOTE_SIZE),text:'',author:getAuthor(),date:new Date().toISOString()};
   S.annots.push(a);pushHist();
   setTool('sel');
   renderOne(a);selectAnn(a.id);
+  try{fitNote(pg,a)}catch(_){}
   /* iOS only raises the keyboard for a focus() made inside a user gesture: focus now, and again on the finger-up / click that ends this tap */
   const foc=()=>{const ta=pg.al.querySelector('[data-cid="'+a.id+'"] textarea');if(ta&&document.activeElement!==ta){try{ta.focus({preventScroll:true})}catch(_){ta.focus()}}};
   foc();
@@ -3475,7 +3489,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v25';
+  const APP_VER='v26';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3518,9 +3532,10 @@ if(PWA){
     const pb=$('#propbar'),v=$('#viewer');
     let top=$('#mhead').getBoundingClientRect().bottom+10,bot=(vv?vv.offsetTop+vv.height:innerHeight)-60;
     if(isCE&&root.classList.contains('fmt')){const r=pb.getBoundingClientRect();if(root.classList.contains('fmtTop'))top=Math.max(top,r.bottom+10);else bot=Math.min(bot,r.top-10)}
+    if(!isCE&&root.classList.contains('kb')&&!pb.hidden&&!root.classList.contains('tx'))top=Math.max(top,pb.getBoundingClientRect().bottom+8);
     const r=el.getBoundingClientRect();
     if(r.top<top)v.scrollTop-=top-r.top;else if(r.bottom>bot)v.scrollTop+=Math.min(r.bottom-bot,r.top-top);
-    if(!isCE)return;
+    if(!isCE){const vr=v.getBoundingClientRect();if(r.left<vr.left+4)v.scrollLeft-=vr.left+4-r.left;else if(r.right>vr.right-4)v.scrollLeft+=Math.min(r.right-vr.right+4,r.left-vr.left-4);return}
     const sel=getSelection();
     if(sel.rangeCount){const cr=sel.getRangeAt(0).getClientRects()[0];const vr=v.getBoundingClientRect();
       if(cr&&cr.height){if(cr.left<vr.left+12)v.scrollLeft-=vr.left+12-cr.left;else if(cr.right>vr.right-12)v.scrollLeft+=cr.right-vr.right+12}}
