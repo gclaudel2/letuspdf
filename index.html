@@ -133,6 +133,8 @@ button,input,select{font:inherit;color:inherit}
 .a-pen{left:0;top:0;width:100%;height:100%;pointer-events:none!important;overflow:visible}
 .a-pen path{pointer-events:stroke;cursor:move}
 .hd{position:absolute;width:calc(11px/var(--z,1));height:calc(11px/var(--z,1));margin:calc(-6px/var(--z,1)) 0 0 calc(-6px/var(--z,1));background:var(--panel2);border:calc(1.5px/var(--z,1)) solid var(--accent);border-radius:calc(2px/var(--z,1));z-index:3}
+.hd::after{content:'';position:absolute;inset:calc(-9px/var(--z,1))}
+.hd{touch-action:none}
 .hd.nw,.hd.se{cursor:nwse-resize}.hd.ne,.hd.sw{cursor:nesw-resize}
 .empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center}
 .drop{max-width:420px;width:100%;border:2px dashed var(--line);border-radius:14px;padding:36px 24px;background:var(--panel);display:flex;flex-direction:column;gap:12px;align-items:center}

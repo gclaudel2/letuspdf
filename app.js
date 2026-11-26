@@ -1351,8 +1351,15 @@ function applyDrag(a,o,mode,dx,dy,pg){
   }
   const MIN=6;const left=mode[1]==='w',top=mode[0]==='n';
   if(a.type==='image'){
-    const r=o.w/o.h;let w=o.w+(left?-dx:dx);w=Math.max(MIN*2,w);const h=w/r;
-    a.w=w;a.h=h;a.x=left?o.x+o.w-w:o.x;a.y=top?o.y+o.h-h:o.y;return;
+    /* the corner opposite the grabbed one stays fixed; the grabbed corner follows the pointer,
+       projected on the image's diagonal so the ratio is kept and both axes count */
+    const sx=left?-1:1,sy=top?-1:1;
+    const ax=left?o.x+o.w:o.x,ay=top?o.y+o.h:o.y;
+    const vx=(left?o.x:o.x+o.w)+dx-ax,vy=(top?o.y:o.y+o.h)+dy-ay;
+    const t=(vx*sx*o.w+vy*sy*o.h)/(o.w*o.w+o.h*o.h);
+    const k=Math.max(t,Math.max(12/o.w,12/o.h));
+    const w=o.w*k,h=o.h*k;
+    a.w=w;a.h=h;a.x=left?ax-w:ax;a.y=top?ay-h:ay;return;
   }
   let x=o.x,y=o.y,w=o.w,h=o.h;
   if(left){x=o.x+dx;w=o.w-dx}else w=o.w+dx;
@@ -2428,6 +2435,17 @@ async function addImageFile(file,at){
   }catch(e){console.error(e);toast('Impossible d\'insérer cette image.')}
   finally{busy(false)}
 }
+/* bring a freshly placed annotation to the middle of the visible area (above the bottom bars) */
+function centerAnn(a){
+  const go=()=>{
+    const el=document.querySelector('[data-id="'+a.id+'"]');if(!el)return;
+    const r=el.getBoundingClientRect(),vr=viewer.getBoundingClientRect();
+    const ph=document.documentElement.classList.contains('phone');
+    const top=vr.top+vr.height*(ph?0.34:0.45);
+    viewer.scrollBy({top:r.top+r.height/2-top,left:r.left+r.width/2-(vr.left+vr.width/2),behavior:'smooth'});
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(go));
+}
 function placeImage(info,at){
   {
     let pg=S.pages[S.cur-1],cxc,cyc;
@@ -2446,6 +2464,7 @@ function placeImage(info,at){
     const a={id:uid(),type:'image',n:pg.n,x:clamp((cxc-pr.left)/k-w/2,0,pg.w-w),y:clamp((cyc-pr.top)/k-h/2,0,pg.h-h),w,h,img:info.id};
     S.annots.push(a);pushHist();renderOne(a);selectAnn(a.id);
     if(IM.all){IM.all=false;showAllBar(a)}
+    centerAnn(a);
     return a;
   }
 }
@@ -3675,7 +3694,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v29';
+  const APP_VER='v30';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
