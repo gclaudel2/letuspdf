@@ -2245,6 +2245,7 @@ $('#spMenu').addEventListener('click',e=>{
   if(b.dataset.sp==='cn')specialCN();
   else if(b.dataset.sp==='split')toggleSplit(!S.split);
   else if(b.dataset.sp==='email')emailActive();
+  else if(b.dataset.sp==='allpages')startAllPages();
 });
 document.addEventListener('pointerdown',e=>{if(!$('#spMenu').hidden&&!e.target.closest('#spMenu,#bSpecial'))closeSpecial()},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#spMenu').hidden)closeSpecial()});
@@ -2309,6 +2310,11 @@ function renderProps(force){
     }else h+='<span class="hint">Faites glisser sur la page pour créer un lien.</span>';
   }else if(t==='note'){
     if(!a)h+='<span class="hint">Cliquez sur la page pour placer un commentaire.</span>';
+  }
+  if(a&&a.type==='image'){
+    const fv=favOf(S.imgs[a.img]);
+    h+=(fv?'<button class="btn on" data-t="favdel" title="Retirer cette image des favoris">★<span class="hide-s">Favoris</span></button>':'<button class="btn" data-t="favadd" title="Ajouter cette image aux favoris">☆<span class="hide-s">Favoris</span></button>')
+      +'<button class="btn" data-t="allpg" title="Copier cette image au même endroit sur toutes les pages">'+ICONS.dup+'<span class="hide-s">Toutes les pages</span></button>';
   }
   if(a){
     h+='<div class="sep"></div><button class="btn" data-t="dup" title="Dupliquer">'+ICONS.dup+'<span class="hide-s">Dupliquer</span></button>'
@@ -2377,6 +2383,13 @@ $('#propbar').addEventListener('click',e=>{
   const t=b.dataset.t,a=curAnn();
   if(t==='fonts'){openFonts();return}
   if(t==='gotolink'&&a){followAnnLink(a,1);return}
+  if(a&&a.type==='image'&&(t==='favadd'||t==='favdel'||t==='allpg')){
+    const info=S.imgs[a.img];
+    if(t==='allpg'){showAllBar(a);return}
+    if(t==='favadd'){favAdd(info).then(()=>renderProps(true))}
+    else{const f=favOf(info);if(f)favDel(f.id).then(()=>{toast('Retirée des favoris.');renderProps(true)})}
+    return;
+  }
   if(t==='del'&&a){commitEdit();removeAnn(a.id,true)}
   else if(t==='dup'&&a){commitEdit();dupAnn()}
   else if(t==='bold'||t==='italic'){
@@ -2411,6 +2424,12 @@ async function addImageFile(file,at){
   try{
     busy(true,'Insertion de l\'image…');
     const info=await prepareImage(file);S.imgs[info.id]=info;
+    placeImage(info,at);
+  }catch(e){console.error(e);toast('Impossible d\'insérer cette image.')}
+  finally{busy(false)}
+}
+function placeImage(info,at){
+  {
     let pg=S.pages[S.cur-1],cxc,cyc;
     if(at){
       const f=S.pages.find(p=>{const b=p.el.getBoundingClientRect();return at.x>=b.left&&at.x<=b.right&&at.y>=b.top&&at.y<=b.bottom});
@@ -2426,8 +2445,112 @@ async function addImageFile(file,at){
     if(h>pg.h*0.6){h=pg.h*0.6;w=h*info.w/info.h}
     const a={id:uid(),type:'image',n:pg.n,x:clamp((cxc-pr.left)/k-w/2,0,pg.w-w),y:clamp((cyc-pr.top)/k-h/2,0,pg.h-h),w,h,img:info.id};
     S.annots.push(a);pushHist();renderOne(a);selectAnn(a.id);
-  }catch(e){console.error(e);toast('Impossible d\'insérer cette image.')}
-  finally{busy(false)}
+    if(IM.all){IM.all=false;showAllBar(a)}
+    return a;
+  }
+}
+
+/* ---------- favourite images + image on every page ---------- */
+const IM={all:false,favs:[],loaded:false,aid:null};
+const favKey=i=>{const b=i.bytes,n=b.length;let s=0;for(let k=0;k<n;k+=Math.max(1,(n/97)|0))s=(s*31+b[k])>>>0;return i.type+':'+i.w+'x'+i.h+':'+n+':'+s};
+function favDb(){return new Promise((res,rej)=>{try{const rq=indexedDB.open('letuspdf-favs',1);rq.onupgradeneeded=()=>rq.result.createObjectStore('imgs',{keyPath:'id'});rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error)}catch(e){rej(e)}})}
+const favTx=async(m,fn)=>{const db=await favDb();return new Promise((res,rej)=>{const tx=db.transaction('imgs',m),st=tx.objectStore('imgs');const r=fn(st);tx.oncomplete=()=>{db.close();res(r&&r.result)};tx.onerror=()=>{db.close();rej(tx.error)}})};
+const favMake=f=>({...f,url:URL.createObjectURL(new Blob([f.bytes],{type:f.type==='jpg'?'image/jpeg':'image/png'}))});
+async function favLoad(){
+  if(IM.loaded)return;
+  try{const all=await favTx('readonly',st=>st.getAll());IM.favs=(all||[]).sort((x,y)=>y.ts-x.ts).map(favMake)}catch(e){IM.favs=[]}
+  IM.loaded=true;
+}
+const favOf=info=>info&&IM.favs.find(f=>f.key===favKey(info));
+async function favAdd(info){
+  await favLoad();
+  if(favOf(info)){toast('Cette image est déjà dans vos favoris.');return false}
+  if(IM.favs.length>=40){toast('Vous avez atteint 40 favoris : retirez-en un d\'abord.',4000);return false}
+  const f={id:uid(),key:favKey(info),bytes:info.bytes,type:info.type,w:info.w,h:info.h,ts:Date.now()};
+  try{await favTx('readwrite',st=>st.put(f))}catch(e){toast('Impossible d\'enregistrer ce favori sur cet appareil.',4000);return false}
+  IM.favs.unshift(favMake(f));toast('Ajoutée aux favoris.');return true;
+}
+async function favDel(id){
+  try{await favTx('readwrite',st=>st.delete(id))}catch(e){}
+  const i=IM.favs.findIndex(f=>f.id===id);if(i>=0){URL.revokeObjectURL(IM.favs[i].url);IM.favs.splice(i,1)}
+}
+function imgMenuClose(){$('#imgMenu').hidden=true;$('#imgMenu').classList.remove('open');$$('#tools [data-tool="image"]').forEach(b=>b.classList.remove('on'))}
+function drawImgMenu(){
+  const m=$('#imgMenu');
+  m.innerHTML='<div class="imh">'+(IM.all?'Image sur chaque page':'Images')+'</div>'
+    +(IM.all?'<div class="imsub">Choisissez l\'image. Placez-la sur cette page, puis appliquez-la aux autres.</div>':'')
+    +'<button class="mi" data-im="pick">'+ICONS.image+'Choisir une image…</button>'
+    +'<div class="mi-sep"></div><div class="imh2">Favoris</div>'
+    +(IM.favs.length?'<div class="imfav">'+IM.favs.map(f=>'<div class="fv"><button class="fb" data-fav="'+f.id+'" title="Placer cette image"><img src="'+f.url+'" alt="Favori"></button><button class="fx" data-favdel="'+f.id+'" aria-label="Retirer des favoris" title="Retirer des favoris">×</button></div>').join('')+'</div>'
+      :'<div class="imsub">Aucun favori. Ajoutez par exemple votre signature pour la placer en un geste.</div>')
+    +'<button class="mi" data-im="newfav">'+ICONS.plus+'Ajouter une image aux favoris…</button>';
+}
+async function openImgMenu(){
+  if(!S.pdf){toast('Ouvrez d\'abord un PDF.');return}
+  const m=$('#imgMenu');
+  if(!m.hidden){imgMenuClose();return}
+  await favLoad();drawImgMenu();
+  m.hidden=false;m.classList.add('open');
+  const btn=$('#tools [data-tool="image"]');if(btn)btn.classList.add('on');
+  if(!document.documentElement.classList.contains('phone')&&btn){
+    const r=btn.getBoundingClientRect();
+    m.style.left=Math.max(8,Math.min(r.left,innerWidth-m.offsetWidth-8))+'px';m.style.top=(r.bottom+4)+'px';
+  }
+}
+$('#imgMenu').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-im],[data-fav],[data-favdel]');if(!b)return;
+  if(b.dataset.favdel){await favDel(b.dataset.favdel);drawImgMenu();return}
+  if(b.dataset.fav){
+    const f=IM.favs.find(x=>x.id===b.dataset.fav);if(!f)return;
+    imgMenuClose();
+    const info=S.imgs['fav'+f.id]||(S.imgs['fav'+f.id]={id:'fav'+f.id,url:f.url,bytes:f.bytes,type:f.type,w:f.w,h:f.h,favId:f.id});
+    placeImage(info);return;
+  }
+  if(b.dataset.im==='pick'){imgMenuClose();$('#fImg').click()}
+  else if(b.dataset.im==='newfav'){imgMenuClose();IM.all=false;$('#fFav').click()}
+});
+document.addEventListener('pointerdown',e=>{if(!$('#imgMenu').hidden&&!e.target.closest('#imgMenu,[data-tool="image"],[data-mt="image"]'))imgMenuClose()},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#imgMenu').hidden)imgMenuClose()});
+$('#fFav').onchange=async e=>{
+  const fs=[...e.target.files];e.target.value='';
+  for(const f of fs){
+    if(!/^image\//.test(f.type)){toast('Ce fichier n\'est pas une image.');continue}
+    try{busy(true,'Ajout aux favoris…');const info=await prepareImage(f);await favAdd(info)}catch(err){toast('Impossible de lire cette image.')}finally{busy(false)}
+  }
+  if(!$('#imgMenu').hidden)drawImgMenu();renderProps(true);
+};
+/* the page-wide bar shown after an image was placed for "every page" */
+function showAllBar(a){
+  IM.aid=a.id;const b=$('#allBar');b.hidden=false;
+}
+function hideAllBar(){IM.aid=null;$('#allBar').hidden=true}
+function applyAllPages(){
+  const a=S.annots.find(x=>x.id===IM.aid);
+  if(!a){hideAllBar();return}
+  const mode=$('#allMode').value,src=S.pages.find(p=>p.n===a.n);if(!src){hideAllBar();return}
+  const added=[];
+  for(const pg of S.pages){
+    if(pg.n===a.n)continue;
+    if(mode==='odd'&&pg.n%2===0)continue;
+    if(mode==='even'&&pg.n%2===1)continue;
+    if(mode==='notfirst'&&pg.n===1)continue;
+    const k=pg.w/src.w;let w=a.w*k,h=w*a.h/a.w;
+    if(h>pg.h){h=pg.h;w=h*a.w/a.h}
+    const x=clamp(a.x/src.w*pg.w,0,pg.w-w),y=clamp(a.y/src.h*pg.h,0,pg.h-h);
+    if(S.annots.some(o=>o.type==='image'&&o.n===pg.n&&o.img===a.img&&Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1))continue;
+    added.push({id:uid(),type:'image',n:pg.n,x,y,w,h,img:a.img});
+  }
+  if(!added.length){toast('Rien à ajouter : l\'image est déjà sur ces pages.');hideAllBar();return}
+  S.annots.push(...added);pushHist();added.forEach(renderOne);selectAnn(a.id);hideAllBar();
+  toast('Image ajoutée sur '+added.length+(added.length>1?' pages ajoutées. Annulation possible (Ctrl+Z).':' page ajoutée. Annulation possible (Ctrl+Z).'),4200);
+}
+$('#allBar').addEventListener('click',e=>{
+  const b=e.target.closest('[data-ab]');if(!b)return;
+  if(b.dataset.ab==='apply')applyAllPages();else hideAllBar();
+});
+function startAllPages(){
+  if(!S.pdf){toast('Ouvrez d\'abord un PDF.');return}
+  IM.all=true;openImgMenu();
 }
 
 /* ---------- ui state ---------- */
@@ -2446,7 +2569,7 @@ function syncUi(){
   renderProps(false);renderTabs();
 }
 function setTool(t){
-  if(t==='image'){if(!S.pdf){toast('Ouvrez d\'abord un PDF.');return}$('#fImg').click();return}
+  if(t==='image'){IM.all=false;openImgMenu();return}
   commitEdit();S.tool=t;viewer.className='tool-'+t;
   $$('#tools [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
   if(S.pdf&&TOOL_HINT[t]&&!S.hinted[t]){S.hinted[t]=1;toast(TOOL_HINT[t],3200)}
@@ -3552,7 +3675,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v28';
+  const APP_VER='v29';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3609,13 +3732,14 @@ if(PWA){
   ['mousedown','pointerdown'].forEach(ev=>fb.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
   fb.onclick=()=>{const on=!root.classList.contains('fmt');if(on)placeFmt();root.classList.toggle('fmt',on);if(on)setTimeout(revealEdit,60)};
   kbSync();
+  favLoad().then(()=>renderProps(false));
   const q=sel=>document.querySelector(sel);
   const click=sel=>{const e=q(sel);if(e&&!e.disabled)e.click()};
   $('#mSave').onclick=()=>click('#bSave');
   $$('#mbar [data-mt]').forEach(b=>b.onclick=()=>click('[data-tool="'+b.dataset.mt+'"]'));
   /* sheet content: [icon, label, selector of the existing control, keep the sheet open] */
   const TABS={
-    'Outils':[['search','Rechercher','#bSearch'],['undo','Annuler','#bUndo',1],['redo','Rétablir','#bRedo',1],['pen','Stylo','[data-tool="pen"]'],['hl','Surligner','[data-tool="hl"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
+    'Outils':[['search','Rechercher','#bSearch'],['undo','Annuler','#bUndo',1],['redo','Rétablir','#bRedo',1],['pen','Stylo','[data-tool="pen"]'],['hl','Surligner','[data-tool="hl"]'],['rect','Rectangle','[data-tool="rect"]'],['link','Lien','[data-tool="link"]'],['note','Note','[data-tool="note"]'],['dup','Image sur chaque page','[data-sp="allpages"]'],['shot','Capture','[data-tool="shot"]'],['font','Polices','#bFonts']],
     'Pages':[['blank','Page vide','#bBlank'],['rotl','Pivoter à gauche','#bRotL',1],['rotr','Pivoter à droite','#bRotR',1],['mvup','Monter','#bMvUp',1],['mvdn','Descendre','#bMvDn',1],['dup','Copier','#bCopyPg',1],['paste','Coller','#bPastePg'],['trash','Supprimer','#bDelPg'],['sidebar','Miniatures','#bThumbs']],
     'Fichier':[['open','Ouvrir un PDF','#bOpen2'],['merge','Fusionner','#bMerge'],['saveas','Enregistrer sous','#bSaveAs'],['special','Partager / envoyer','[data-sp="email"]'],['special','Invoice → CN','[data-sp="cn"]']],
     'Affichage':[]
@@ -3736,7 +3860,7 @@ if(PWA){
   const LANG=pref==='fr'||pref==='en'?pref:(sys.indexOf('fr')===0?'fr':'en');
   document.documentElement.lang=LANG;
   const DICT={"Accueil": "Home", "Affiche le document deux fois, côte à côte, avec navigation et recherche indépendantes": "Shows the document twice, side by side, with independent navigation and search", "Ajouter du texte (T)": "Add text (T)", "Ajouter du texte, des images, des surlignages": "Add text, images, highlights", "Ajouter ou gérer des polices": "Add or manage fonts", "Ajouter une image (I)": "Add an image (I)", "Ajouter, modifier ou supprimer un commentaire (N)": "Add, edit or delete a comment (N)", "Ajouter, modifier ou supprimer un lien hypertexte (L)": "Add, edit or delete a hyperlink (L)", "Aller à la page": "Go to page", "Annuler": "Undo", "Annuler (Ctrl+Z)": "Undo (Ctrl+Z)", "Automatique": "Automatic", "Capture": "Capture", "Capture d'une zone du document (C)": "Capture an area of the document (C)", "Capture sélectionnée": "Capture selected", "Chargement…": "Loading…", "Choisir un PDF": "Choose a PDF", "Clair": "Light", "Coller les pages copiées après la page sélectionnée (Ctrl+V dans les miniatures)": "Paste the copied pages after the selected page (Ctrl+V in the thumbnails)", "Copier": "Copy", "Copier les pages sélectionnées (Ctrl+C dans les miniatures), pour les coller dans un autre onglet": "Copy the selected pages (Ctrl+C in the thumbnails) to paste them into another tab", "Descendre les pages sélectionnées": "Move the selected pages down", "Document": "Document", "Document protégé": "Protected document", "Documents ouverts": "Open documents", "Email": "Email", "Enregistrer": "Save", "Enregistrer (Ctrl+S)": "Save (Ctrl+S)", "Enregistrer sous": "Save as", "Enregistrer sous… (Ctrl+Maj+S)": "Save as… (Ctrl+Shift+S)", "Expression régulière": "Regular expression", "Expression régulière (équivalent des caractères génériques de Word)": "Regular expression (like Word's wildcards)", "Fermer": "Close", "Fermer (Échap)": "Close (Esc)", "Fermer ce document fera perdre les modifications en cours.": "Closing this document will discard your unsaved changes.", "Fermer sans enregistrer": "Close without saving", "Fonctions spéciales": "Special functions", "Fusionner": "Merge", "Fusionner : choisir un autre PDF et ajouter toutes ses pages à la fin de celui-ci": "Merge: pick another PDF and add all its pages at the end of this one", "Ouvrez un PDF de votre appareil. Rien n'est envoyé.": "Open a PDF from your device. Nothing is uploaded.", "Glissez un fichier ici ou choisissez-le sur votre appareil. Rien n'est envoyé : tout reste dans votre navigateur.": "Drop a file here or choose one on your device. Nothing is uploaded: everything stays on your device.", "Ignorer les accents (é = e)": "Ignore accents (é = e)", "Image": "Image", "Importer des fichiers…": "Import files…", "Insérer une page vide après": "Insert a blank page after", "Invoice → CN": "Invoice → CN", "Le PDF modifié ne peut incorporer que des polices dont le navigateur a le fichier. Ajoutez celles du document pour retrouver exactement le même rendu : les fichiers .ttf ou .otf se trouvent dans le dossier des polices de votre ordinateur. Sinon, la police standard la plus proche est utilisée.": "The edited PDF can only embed fonts whose file is available. Add the document's fonts to get exactly the same look: the .ttf or .otf files are in your computer's font folder. Otherwise the closest standard font is used.", "Le remplacement recouvre le texte d'origine et insère le nouveau (comme « Modifier le texte »). Un résultat réparti sur plusieurs lignes ne peut pas être remplacé.": "Replacing covers the original text and inserts the new one (like “Edit text”). A result spread over several lines cannot be replaced.", "Lecture": "Read", "Lien": "Link", "Lire et modifier un PDF": "Read and edit a PDF", "Menu": "Menu", "Miniatures": "Thumbnails", "Modifications non enregistrées": "Unsaved changes", "Modifier": "Edit", "Modifier le texte existant (E)": "Edit existing text (E)", "Modifier le texte existant d'un clic": "Edit existing text with a click", "Monter les pages sélectionnées": "Move the selected pages up", "Mot": "Word", "Mot de passe": "Password", "Mot entier": "Whole word", "Nom du fichier": "File name", "Note": "Note", "Options du texte": "Text options", "Outils": "Tools", "Ouvre le client e-mail avec le PDF actif en pièce jointe": "Opens your email app with the current PDF attached", "Ouvrir": "Open", "Page": "Page", "Page précédente": "Previous page", "Page suivante": "Next page", "Pages du document": "Document pages", "Parcourir…": "Browse…", "Pivoter les pages sélectionnées à droite": "Rotate the selected pages right", "Pivoter les pages sélectionnées à gauche": "Rotate the selected pages left", "Pivoter, déplacer, supprimer des pages": "Rotate, move, delete pages", "Plus": "More", "Polices": "Fonts", "Rechercher": "Search", "Rechercher (Ctrl+F)": "Search (Ctrl+F)", "Rechercher (deuxième vue)": "Search (second view)", "Rechercher (vue 2)": "Search (view 2)", "Rechercher dans le document": "Search the document", "Rechercher et remplacer": "Find and replace", "Rectangle": "Rectangle", "Rectangle ou masque (R)": "Rectangle or mask (R)", "Remplace Invoice par CreditNote, supprime la date limite et passe les montants en négatif": "Replaces Invoice with CreditNote, removes the due date and turns the amounts negative", "Remplacer": "Replace", "Remplacer par": "Replace with", "Respecter la casse": "Match case", "Rester ici": "Stay here", "Résultat précédent (Maj+Entrée)": "Previous result (Shift+Enter)", "Résultat suivant (Entrée)": "Next result (Enter)", "Résultats": "Results", "Résultats (vue 2)": "Results (view 2)", "Rétablir (Ctrl+Y)": "Redo (Ctrl+Y)", "Saisissez le mot de passe pour ouvrir ce PDF.": "Enter the password to open this PDF.", "Sombre": "Dark", "Spécial": "Special", "Stylo": "Pen", "Stylo (P)": "Pen (P)", "Supprimer les pages sélectionnées": "Delete the selected pages", "Surligner": "Highlight", "Surligner (H)": "Highlight (H)", "Sélection et lecture (V)": "Select and read (V)", "Texte": "Text", "Thème": "Theme", "Réglages": "Settings", "Thème de l'interface": "Interface theme", "Tout remplacer": "Replace all", "Télécharger": "Download", "Utiliser les polices de l'ordinateur": "Use the computer's fonts", "Zoom arrière (Ctrl+-)": "Zoom out (Ctrl+-)", "Zoom avant (Ctrl++)": "Zoom in (Ctrl++)", "▸ Remplacer": "▸ Replace", "Fichier": "File", "Affichage": "View", "Pages": "Pages", "Page vide": "Blank page", "Pivoter à gauche": "Rotate left", "Pivoter à droite": "Rotate right", "Monter": "Move up", "Descendre": "Move down", "Coller": "Paste", "Supprimer": "Delete", "Ouvrir un PDF": "Open a PDF", "Partager / envoyer": "Share / send", "Enregistrer dans Fichiers": "Save to Files", "Rétablir": "Redo", "Ajuster à la page": "Fit to page", "Zoom arrière": "Zoom out", "Zoom avant": "Zoom in", "Choisir l'emplacement…": "Choose location…", "Ouvrir avec": "Open with", "Ouvrir avec…": "Open with…", "Application…": "Application…", "Auteur": "Author", "Utilisateur": "User", "Commentaire vide": "Empty comment", "Lien sans adresse": "Link without address", "Copier la page": "Copy page", "Copie…": "Copying…", "Capture…": "Capturing…", "Fusion…": "Merging…", "Remplacement…": "Replacing…", "Insertion de l'image…": "Inserting image…", "Préparation du fichier…": "Preparing file…", "Préparation de l'e-mail…": "Preparing email…", "Conversion en note de crédit…": "Converting to credit note…", "Lecture des polices…": "Reading fonts…", "Lecture des polices de l'ordinateur…": "Reading the computer's fonts…", "Aucun fichier récent": "No recent files", "Aucun résultat": "No results", "Aucun résultat.": "No results.", "Mot de passe incorrect": "Incorrect password", "Ouverture annulée.": "Opening cancelled.", "Zone trop petite.": "Area too small.", "Fichier enregistré.": "File saved.", "Image copiée dans le presse-papiers.": "Image copied to the clipboard.", "Rétablir l'original": "Restore original", "Supprimer ce commentaire": "Delete this comment", "Aller à la page liée": "Go to linked page", "Écrivez votre commentaire…": "Write your comment…", "Touchez un texte du document pour le modifier.": "Tap text in the document to edit it.", "Touchez la page à l'endroit où ajouter du texte.": "Tap the page where you want to add text.", "Touchez longuement un mot puis glissez pour surligner.": "Long-press a word, then drag to highlight.", "Faites glisser sur la page pour dessiner un rectangle.": "Drag on the page to draw a rectangle.", "Dessinez à main levée sur la page.": "Draw freehand on the page.", "Faites glisser sur la page pour capturer une zone en image.": "Drag on the page to capture an area as an image.", "Faites glisser sur la page pour créer un lien. Cliquez sur un lien existant pour le modifier ou le supprimer.": "Drag on the page to create a link. Tap an existing link to edit or delete it.", "Cliquez sur la page à l'endroit où ajouter un commentaire. Cliquez sur un commentaire existant pour le modifier ou le supprimer.": "Tap the page where you want to add a comment. Tap an existing comment to edit or delete it.", "Cliquez sur la page pour placer un commentaire.": "Tap the page to place a comment.", "Faites glisser sur la page pour créer un lien.": "Drag on the page to create a link.", "Impossible d'ouvrir ce fichier.": "Unable to open this file.", "Impossible d'ouvrir le sélecteur de fichier.": "Unable to open the file picker.", "Fichier introuvable : il a peut-être été déplacé ou supprimé.": "File not found: it may have been moved or deleted.", "Impossible de rouvrir ce fichier.": "Unable to reopen this file.", "Utilisez « Parcourir… » pour rouvrir ce fichier.": "Use “Browse…” to reopen this file.", "Autorisation refusée pour ce fichier.": "Permission denied for this file.", "Impossible de rouvrir ce fichier : il a peut-être été déplacé ou supprimé.": "Unable to reopen this file: it may have been moved or deleted.", "Impossible d'ouvrir ce fichier : est-il bien un PDF valide ?": "Unable to open this file: is it a valid PDF?", "Ouvrez un document avant d'activer la vue partagée.": "Open a document before turning on the split view.", "Vue partagée activée : chaque vue défile, zoome et recherche indépendamment.": "Split view on: each view scrolls, zooms and searches independently.", "Ce lien ne pointe vers rien de reconnu.": "This link doesn't point to anything recognised.", "Impossible de suivre ce lien.": "Unable to follow this link.", "Ce résultat ne peut pas être remplacé automatiquement (texte sur plusieurs lignes ou pivoté).": "This result can't be replaced automatically (multi-line or rotated text).", "La capture a échoué.": "The capture failed.", "Ce texte est pivoté : sa modification n'est pas prise en charge.": "This text is rotated: editing it is not supported.", "Impossible de charger le module de polices (connexion nécessaire).": "Unable to load the font module (connection needed).", "Aucune police valide trouvée (formats acceptés : .ttf et .otf).": "No valid font found (accepted formats: .ttf and .otf).", "Cette fonction n'est pas disponible dans ce navigateur.": "This feature isn't available in this browser.", "Import déjà en cours, merci de patienter…": "Import already in progress, please wait…", "Accès aux polices refusé ou indisponible dans cette vue. Importez plutôt les fichiers de police.": "Font access denied or unavailable here. Import the font files instead.", "Ce PDF est protégé par un mot de passe : il ne peut pas être modifié.": "This PDF is password-protected: it can't be edited.", "Ce PDF est protégé par un mot de passe : il peut être lu, mais pas enregistré après modification.": "This PDF is password-protected: it can be read, but not saved after editing.", "Ce PDF est protégé par un mot de passe : il peut être lu, mais pas réenregistré pour l'envoyer.": "This PDF is password-protected: it can be read, but not saved again to send it.", "Ce PDF est chiffré : ses liens et commentaires existants peuvent être suivis mais pas modifiés.": "This PDF is encrypted: its existing links and comments can be followed but not edited.", "Les PDF protégés par mot de passe ne peuvent pas être modifiés.": "Password-protected PDFs can't be edited.", "Les PDF protégés par mot de passe ne peuvent pas être copiés.": "Password-protected PDFs can't be copied.", "Les liens ou commentaires existants de ce PDF ne peuvent pas être modifiés (structure du fichier non lisible).": "The existing links or comments in this PDF can't be edited (unreadable file structure).", "La conversion a échoué": "The conversion failed", "Rien à convertir : aucun texte « Invoice » ni montant reconnu dans ce document.": "Nothing to convert: no “Invoice” text or amount found in this document.", "Ouvrez d'abord un PDF.": "Open a PDF first.", "Ce fichier n'est pas une image.": "This file isn't an image.", "Impossible d'insérer cette image.": "Unable to insert this image.", "Ce fichier n'est pas un PDF.": "This file isn't a PDF.", "La copie a échoué : votre navigateur ne le permet peut-être pas ici.": "Copy failed: your browser may not allow it here.", "Le téléchargement a échoué.": "The download failed.", "Impossible d'ouvrir ce lien.": "Unable to open this link.", "Ce lien n'a pas encore d'adresse.": "This link has no address yet.", "Une police ajoutée n'a pas pu être incorporée : la police standard la plus proche a été utilisée.": "An added font couldn't be embedded: the closest standard font was used.", "L'enregistrement n'est pas disponible dans cette vue.": "Saving isn't available in this view.", "Une demande d'enregistrement est déjà ouverte.": "A save request is already open.", "L'enregistrement a échoué.": "Saving failed.", "L'envoi par e-mail n'est pas disponible dans cette vue.": "Sending by email isn't available in this view.", "L'envoi par e-mail a échoué.": "Sending by email failed.", "Impossible de supprimer toutes les pages.": "Can't delete all the pages.", "Cette opération a échoué.": "This operation failed.", "Ce fichier n'est pas un PDF valide, ou il est protégé par mot de passe.": "This file isn't a valid PDF, or it is password-protected.", "Ce PDF ne contient aucune page.": "This PDF has no pages.", "La copie a échoué.": "Copy failed.", "Aucune page copiée : utilisez d'abord « Copier » sur une page.": "No pages copied: use “Copy” on a page first.", "Ouvrez un PDF pour le lire et le modifier. Rien n'est envoyé : tout reste sur votre appareil.": "Open a PDF to read and edit it. Nothing is uploaded: everything stays on your device.", "Retour au document": "Back to document", "Fermer ce document": "Close this document", "Fermer l'onglet": "Close tab", "Le sélecteur de fichiers de l'iPhone s'ouvre : choisissez le dossier (iCloud Drive, Sur mon iPhone, OneDrive…).": "The iPhone file picker opens: choose a folder (iCloud Drive, On My iPhone, OneDrive…).", "« Choisir l'emplacement » ouvre le menu du téléphone : choisissez Enregistrer dans Fichiers (iPhone) ou votre application de stockage (Android).": "“Choose location” opens the phone menu: choose Save to Files (iPhone) or your storage app (Android).", "Ajuster": "Fit", "Adresse web": "Web address", "Page du document": "Document page", "Tester": "Test", "Dupliquer": "Duplicate", "Gras": "Bold", "Italique": "Italic", "Police": "Font", "Polices intégrées (incorporées au PDF)": "Built-in fonts (embedded in the PDF)", "Chargement de la police…": "Loading font…", "Police intégrée indisponible.": "Built-in font unavailable.", "Taille": "Size", "Couleur": "Color", "Épaisseur": "Thickness", "Contour": "Outline", "Remplissage": "Fill", "Type de lien": "Link type", "Adresse du lien": "Link address", "Couleur de remplissage": "Fill color", "Couleur du contour": "Outline color", "Couleur du stylo": "Pen color", "Couleur du surlignage": "Highlight color", "Couleur du texte": "Text color", "Numéro de page": "Page number", "Épaisseur du contour": "Outline thickness", "Épaisseur du trait": "Stroke thickness", "Supprimer (Suppr)": "Delete (Del)", "Tester le lien": "Test link", "https://exemple.com ou adresse e-mail": "https://example.com or email address", "Aa": "Aa", "Langue": "Language", "Choisir la langue": "Choose language", "Écriture directe impossible, nouvelle tentative via le dialogue du système.": "Direct writing isn't possible, trying again through the system dialog.", "Pour installer : touchez": "To install: tap", "Partager": "Share", "puis": "then", "Sur l'écran d'accueil": "Add to Home Screen", "Aucune police ajoutée. Les polices standard (Helvetica, Times, Courier) sont toujours disponibles.": "No fonts added. The standard fonts (Helvetica, Times, Courier) are always available.", "Les polices ajoutées sont conservées sur cet appareil (hors connexion aussi).": "Added fonts are kept on this device (offline too).", "À propos, confidentialité et licences": "About, privacy and licenses", "Politique de confidentialité": "Privacy policy", "Aide et contact": "Help and contact", "Licences / Open-source licenses": "Open-source licenses", "Lire et modifier un PDF. Rien n'est envoyé : tout reste sur votre appareil.": "Read and edit a PDF. Nothing is uploaded: everything stays on your device.", "Rien n'est envoyé : tout reste sur votre appareil.": "Nothing is uploaded: everything stays on your device.", "Partager…": "Share…", "Enregistrer le fichier": "Save file", "Licences": "Licenses", "Licences des composants open source": "Open-source component licenses", "À propos": "About", "Confidentialité": "Privacy"};
-  const FRAG=[["). Si cela persiste après avoir ouvert plusieurs documents, fermez quelques onglets ou redémarrez l'application.", "). If this persists after opening several documents, close a few tabs or restart the app."], [" autres résultats : affinez la recherche pour les lister. Les boutons ↑ ↓ les parcourent tous.", " more results: refine the search to list them. The ↑ ↓ buttons step through all of them."], ["(ATTENTION : non conservée(s) au redémarrage, voir message ci-dessus)", "(WARNING: not kept after restart, see message above)"], [" ne sera pas retrouvée au redémarrage (serveur local inaccessible : ", " won't be found after restart (local server unreachable: "], [" ne sera pas retrouvée au redémarrage (enregistrement refusé : ", " won't be found after restart (saving refused: "], [" autres résultats : affinez la recherche pour les lister.", " more results: refine the search to list them."], [". Ouvrez l'autre document puis cliquez sur « Coller ».", ". Open the other document, then tap “Paste”."], ["Ajoutez une police complète pour les conserver.", "Add a complete font to keep them."], [" ne sera pas conservée sur cet appareil (", " won't be kept on this device ("], ["Impossible d'ouvrir le client e-mail : ", "Unable to open the email app: "], [" (texte sur plusieurs lignes ou pivoté)", " (multi-line or rotated text)"], ["Impossible d'ouvrir ce fichier (", "Unable to open this file ("], ["Impossible de générer le PDF : ", "Unable to generate the PDF: "], ["non conservée(s) au redémarrage", "not kept after restart"], ["lecture du contenu impossible", "content can't be read"], [" de l'ordinateur disponibles", " from the computer available"], [" de l'ordinateur disponible", " from the computer available"], ["conservée(s) au redémarrage", "kept after restart"], ["La conversion a échoué : ", "The conversion failed: "], ["conservées au redémarrage", "kept after restart"], ["conservée au redémarrage", "kept after restart"], ["Enregistrées dans : ", "Saved in: "], ["Police d'origine : ", "Original font: "], ["Aller à la page ", "Go to page "], [" ligne supprimée", " line removed"], ["erreur inconnue", "unknown error"], ["Invoice → CN : ", "Invoice → CN: "], ["Introuvable : ", "Not found: "], ["Remplacée par ", "Replaced by "], ["« CreditNote »", "“CreditNote”"], [" ne sera pas", " won't be"], [" en négatif", " made negative"], ["« Date »", "“Date”"], [" copiée", " copied"], ["Page ", "Page "]];
+  const FRAG=[["). Si cela persiste après avoir ouvert plusieurs documents, fermez quelques onglets ou redémarrez l'application.", "). If this persists after opening several documents, close a few tabs or restart the app."], ["Choisir une image, la placer sur la page active, puis la copier au même endroit sur toutes les pages", "Choose an image, place it on the current page, then copy it to the same spot on every page"], [" autres résultats : affinez la recherche pour les lister. Les boutons ↑ ↓ les parcourent tous.", " more results: refine the search to list them. The ↑ ↓ buttons step through all of them."], ["Aucun favori. Ajoutez par exemple votre signature pour la placer en un geste.", "No favorites yet. Add your signature, for example, to place it in one tap."], ["Choisissez l'image. Placez-la sur cette page, puis appliquez-la aux autres.", "Choose the image. Place it on this page, then apply it to the others."], ["(ATTENTION : non conservée(s) au redémarrage, voir message ci-dessus)", "(WARNING: not kept after restart, see message above)"], [" ne sera pas retrouvée au redémarrage (serveur local inaccessible : ", " won't be found after restart (local server unreachable: "], [" ne sera pas retrouvée au redémarrage (enregistrement refusé : ", " won't be found after restart (saving refused: "], [" autres résultats : affinez la recherche pour les lister.", " more results: refine the search to list them."], ["Copier cette image au même endroit sur toutes les pages", "Copy this image to the same spot on every page"], [". Ouvrez l'autre document puis cliquez sur « Coller ».", ". Open the other document, then tap “Paste”."], ["Vous avez atteint 40 favoris : retirez-en un d'abord.", "You have reached 40 favorites: remove one first."], ["Impossible d'enregistrer ce favori sur cet appareil.", "Couldn't save this favorite on this device."], ["Placez l'image, puis appliquez-la aux autres pages.", "Place the image, then apply it to the other pages."], ["Rien à ajouter : l'image est déjà sur ces pages.", "Nothing to add: the image is already on those pages."], ["Ajoutez une police complète pour les conserver.", "Add a complete font to keep them."], [" pages ajoutées. Annulation possible (Ctrl+Z).", " pages. You can undo (Ctrl+Z)."], [" page ajoutée. Annulation possible (Ctrl+Z).", " page. You can undo (Ctrl+Z)."], [" ne sera pas conservée sur cet appareil (", " won't be kept on this device ("], ["Impossible d'ouvrir le client e-mail : ", "Unable to open the email app: "], [" (texte sur plusieurs lignes ou pivoté)", " (multi-line or rotated text)"], ["Cette image est déjà dans vos favoris.", "This image is already in your favorites."], ["Impossible d'ouvrir ce fichier (", "Unable to open this file ("], ["Impossible de générer le PDF : ", "Unable to generate the PDF: "], ["non conservée(s) au redémarrage", "not kept after restart"], ["Ajouter cette image aux favoris", "Add this image to favorites"], ["Retirer cette image des favoris", "Remove this image from favorites"], ["Impossible de lire cette image.", "Couldn't read this image."], ["Ajouter une image aux favoris…", "Add an image to favorites…"], ["lecture du contenu impossible", "content can't be read"], [" de l'ordinateur disponibles", " from the computer available"], [" de l'ordinateur disponible", " from the computer available"], ["conservée(s) au redémarrage", "kept after restart"], ["La conversion a échoué : ", "The conversion failed: "], ["conservées au redémarrage", "kept after restart"], ["conservée au redémarrage", "kept after restart"], ["Toutes sauf la première", "All except the first"], ["Image sur chaque page", "Image on every page"], ["Enregistrées dans : ", "Saved in: "], ["Ajoutée aux favoris.", "Added to favorites."], ["Retirée des favoris.", "Removed from favorites."], ["Police d'origine : ", "Original font: "], ["Retirer des favoris", "Remove from favorites"], ["Choisir une image…", "Choose an image…"], ["Placer cette image", "Place this image"], ["Ajout aux favoris…", "Adding to favorites…"], ["Image ajoutée sur ", "Image added to "], ["Aller à la page ", "Go to page "], [" ligne supprimée", " line removed"], ["Toutes les pages", "All pages"], ["Pages concernées", "Pages concerned"], ["erreur inconnue", "unknown error"], ["Invoice → CN : ", "Invoice → CN: "], ["Introuvable : ", "Not found: "], ["Remplacée par ", "Replaced by "], ["« CreditNote »", "“CreditNote”"], ["Pages impaires", "Odd pages"], [" ne sera pas", " won't be"], ["Pages paires", "Even pages"], [" en négatif", " made negative"], ["Appliquer", "Apply"], ["« Date »", "“Date”"], [" copiée", " copied"], ["Favoris", "Favorites"], ["Images", "Images"], ["Page ", "Page "]];
   const nrm=s=>s.replace(/’/g,"'").replace(/[  ]/g,' ').replace(/\s+/g,' ').trim();
   const pl=(n,a,b)=>n>1?b:a;
   const PAT=[

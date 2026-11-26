@@ -183,6 +183,25 @@ button,input,select{font:inherit;color:inherit}
 .mi-sep{height:1px;background:var(--line);margin:4px 2px}
 .mi-empty{color:var(--muted);font-size:12.5px;padding:7px 10px;cursor:default}
 #bSpecial [data-i=chev] svg{width:12px;height:12px}
+#imgMenu{position:fixed;z-index:45;width:300px;max-width:calc(100vw - 16px);background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:8px}
+#imgMenu[hidden],#allBar[hidden]{display:none!important}
+#imgMenu .mi{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:var(--fg);padding:9px 10px;border-radius:6px;cursor:pointer;font:inherit}
+#imgMenu .mi:hover{background:var(--hover,rgba(127,127,127,.14))}
+#imgMenu .mi svg{width:18px;height:18px;flex:none}
+#imgMenu .imh{font-weight:600;padding:4px 10px 6px}
+#imgMenu .imh2{font:600 12px/1 inherit;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:8px 10px 6px}
+#imgMenu .imsub{color:var(--muted);font-size:13px;padding:2px 10px 8px;line-height:1.4}
+#imgMenu .imfav{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;padding:2px 6px 8px;max-height:46vh;overflow:auto}
+#imgMenu .fv{position:relative}
+#imgMenu .fb{display:block;width:100%;aspect-ratio:1;border:1px solid var(--line);border-radius:8px;background:#fff;padding:4px;cursor:pointer}
+#imgMenu .fb img{width:100%;height:100%;object-fit:contain;display:block}
+#imgMenu .fx{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:16px/1 sans-serif;cursor:pointer;padding:0}
+html.phone #imgMenu{left:0!important;right:0;top:auto!important;bottom:0;width:auto;max-width:none;border-radius:16px 16px 0 0;padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px));z-index:75;max-height:72vh;overflow:auto}
+html.phone #imgMenu .mi{padding:13px 12px}
+html.phone #imgMenu .imfav{grid-template-columns:repeat(4,1fr)}
+#allBar{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:61;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;width:max-content;max-width:min(94vw,640px)}
+html.phone #allBar{bottom:calc(150px + env(safe-area-inset-bottom,0px));width:94vw}
+#allBar .abt{flex:1 1 100%;font-size:14px}
 #shotBar{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
   background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
   z-index:61;display:flex;align-items:center;gap:10px;padding:8px;max-width:min(92vw,480px)}
@@ -432,11 +451,19 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
   </div>
 </div>
 <div id="spMenu" hidden role="menu">
+  <button class="mi" role="menuitem" data-sp="allpages" title="Choisir une image, la placer sur la page active, puis la copier au même endroit sur toutes les pages">Image sur chaque page</button>
   <button class="mi" role="menuitem" data-sp="cn" title="Remplace Invoice par CreditNote, supprime la date limite et passe les montants en négatif">Invoice → CN</button>
   <button class="mi" role="menuitem" data-sp="split" title="Affiche le document deux fois, côte à côte, avec navigation et recherche indépendantes">Split view</button>
   <button class="mi" role="menuitem" data-sp="email" title="Ouvre le client e-mail avec le PDF actif en pièce jointe">Email</button>
 </div>
 <div id="setMenu" hidden role="dialog" aria-label="Réglages"><div class="smh">Réglages</div><div class="srow"><label for="themeSel">Thème</label><select class="inp" id="themeSel" aria-label="Thème"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div></div>
+<div id="imgMenu" hidden role="dialog" aria-label="Images"></div>
+<div id="allBar" hidden role="group" aria-label="Image sur chaque page">
+  <span class="abt">Placez l'image, puis appliquez-la aux autres pages.</span>
+  <select class="inp" id="allMode" aria-label="Pages concernées"><option value="all">Toutes les pages</option><option value="notfirst">Toutes sauf la première</option><option value="odd">Pages impaires</option><option value="even">Pages paires</option></select>
+  <button class="btn primary" data-ab="apply">Appliquer</button>
+  <button class="btn" data-ab="close" aria-label="Fermer">Fermer</button>
+</div>
 <div id="openMenu" hidden role="menu">
   <button class="mi" role="menuitem" data-om="browse"><span data-i="open"></span>Parcourir…</button>
   <div class="mi-sep"></div>
@@ -488,6 +515,7 @@ html.phone .mzoom .btn{height:46px;min-width:56px}
 <input type="file" id="fPdf" multiple accept="application/pdf,.pdf" hidden>
 <input type="file" id="fMerge" accept="application/pdf,.pdf" hidden>
 <input type="file" id="fImg" accept="image/*" hidden>
+<input type="file" id="fFav" accept="image/*" multiple hidden>
 <input type="file" id="fFont" accept=".ttf,.otf,font/ttf,font/otf" multiple hidden>
 
 <script src="lib/pdf-lib.min.js"></script>
