@@ -210,7 +210,7 @@ html.phone #allBar{bottom:calc(150px + env(safe-area-inset-bottom,0px));width:94
 #shotBar[hidden]{display:none!important}
 #shotImg{max-width:120px;max-height:80px;border-radius:5px;border:1px solid var(--line);object-fit:contain;background:#fff;flex:none}
 .sbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:8px;z-index:60;max-width:min(92vw,520px);box-shadow:var(--shadow);font-size:13px}
+#toast{pointer-events:none;position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:8px;z-index:60;max-width:min(92vw,520px);box-shadow:var(--shadow);font-size:13px}
 #toast[hidden]{display:none!important}
 #modal,#modal2,#modal3,#modal4{position:fixed;inset:0;background:rgba(10,14,22,.55);z-index:50;display:grid;place-items:center;padding:16px}
 #modal[hidden],#modal2[hidden],#modal3[hidden],#modal4[hidden]{display:none!important}
@@ -280,6 +280,13 @@ html.phone.tx.fmtBot #mFmt{bottom:var(--pbot,70px);top:auto}
 html.phone.fmt #propbar{display:flex!important;position:fixed!important;left:8px!important;right:64px!important;width:auto!important;max-width:none!important;transform:none!important;z-index:45}
 html.phone.fmtTop #propbar{top:var(--ptop,66px)!important;bottom:auto!important}
 html.phone.fmtBot #propbar{bottom:var(--pbot,70px)!important;top:auto!important}
+/* keyboard: dialogs fit the visible area (above the keyboard), and the "Plus" sheet rises above it */
+html.phone #modal,html.phone #modal2,html.phone #modal3,html.phone #modal4{top:var(--vvt,0px)!important;bottom:auto!important;height:var(--vvh,100%)!important;overflow:auto;-webkit-overflow-scrolling:touch}
+html.phone #modal .box,html.phone #modal3 .box,html.phone #modal4 .box{max-height:100%;overflow:auto}
+html.phone.kb .mpanel{bottom:var(--kb,0px);max-height:calc(var(--vvh,100dvh) - 12px);min-height:0}
+html.phone #propbar:not(:has(button,input,select,label)){pointer-events:none}
+@media (max-height:500px){html.phone.kb .note-pop .np-t{height:max(40px,calc((var(--vvh,100dvh) - var(--hh,60px) - 100px)/var(--z,1)))!important}}
+@media (max-height:500px){html.phone.kb:not(.tx) #propbar:not(:has(input,select)){display:none!important}}
 html.phone.kb #toast{bottom:auto;top:calc(var(--ptop,66px) + 170px)}
 html.phone #mhead .mhome{flex:none;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);display:grid;place-items:center;padding:0}
 html.phone #mhead .mhome[hidden]{display:none}

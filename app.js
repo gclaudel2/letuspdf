@@ -3694,7 +3694,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v30';
+  const APP_VER='v31';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
@@ -3707,13 +3707,14 @@ if(PWA){
     const hh=$('#mhead').getBoundingClientRect().bottom;root.style.setProperty('--hh',Math.round(hh)+'px');const vt=vv?Math.max(0,vv.offsetTop):0;root.style.setProperty('--ptop',Math.round(Math.max(hh,vt)+6)+'px');
     const kb=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
     root.style.setProperty('--kb',kb+'px');
+    root.style.setProperty('--vvt',(vv?Math.max(0,Math.round(vv.offsetTop)):0)+'px');root.style.setProperty('--vvh',(vv?Math.round(vv.height):window.innerHeight)+'px');
     root.style.setProperty('--pbot',(kb>80?kb+56:70)+'px');
     root.classList.toggle('kb',kb>80||isEd(document.activeElement));
     if(window.scrollY)window.scrollTo(0,0);
   };
   let rvT;const revSoon=()=>{clearTimeout(rvT);rvT=setTimeout(()=>{try{revealEdit()}catch(_){}},140)};
   if(vv){vv.addEventListener('resize',()=>{kbSync();revSoon()});vv.addEventListener('scroll',kbSync)}
-  document.addEventListener('focusin',()=>{kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
+  document.addEventListener('focusin',e=>{if(isEd(e.target)){const t=$('#toast');if(t)t.hidden=true}kbSync();setTimeout(()=>{kbSync();revealEdit()},450)});
   document.addEventListener('focusout',()=>setTimeout(kbSync,150));
   /* phone: the page list is a drawer over the document; a tap on the document closes it */
   viewer.addEventListener('pointerdown',()=>{if(root.classList.contains('phone')&&S.thumbsOpen){S.thumbsOpen=false;$('#thumbs').hidden=true;$('#bThumbs').classList.remove('on')}},true);
