@@ -23,6 +23,16 @@
   --bg:#12161d; --panel:#1a202a; --panel2:#222a37; --line:#303a4a; --fg:#e5e9f1; --muted:#93a0b5;
   --accent:#3cc1b6; --accent-fg:#07201e; --accent-soft:rgba(60,193,182,.16);
   --edit:#f0953c; --hl:rgba(255,205,0,.4); --danger:#ee6b6b; --shadow:0 1px 3px rgba(0,0,0,.5),0 6px 22px rgba(0,0,0,.4); color-scheme:dark}
+/* v33: touche de jaune "crayon" (bandeau, poignées, outil actif) */
+:root{--sun:#f0a020;--sun-soft:#fdeccb;--sun-ink:#6b4500}
+:root[data-theme="dark"]{--sun:#f5b13a;--sun-soft:rgba(245,177,58,.2);--sun-ink:#f5c872}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--sun:#f5b13a;--sun-soft:rgba(245,177,58,.2);--sun-ink:#f5c872}}
+#mhead{border-bottom:3px solid var(--sun)!important}
+.hd{border-color:var(--sun)!important;background:color-mix(in srgb,var(--sun) 22%,var(--panel2))!important}
+html.phone #mbar .mt.on{color:var(--sun-ink)!important;background:var(--sun-soft)!important;box-shadow:inset 0 3px 0 var(--sun)!important}
+html.phone .mtabs button.on,html.phone .mgrid button.on{background:var(--sun-soft)!important;color:var(--sun-ink)!important;border-color:var(--sun)!important}
+.tab.on{box-shadow:inset 0 2px 0 var(--sun)!important}
+.btn.on{background:var(--sun-soft)!important;border-color:var(--sun)!important;color:var(--sun-ink)!important}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:14px/1.4 var(--font);overflow:hidden}
