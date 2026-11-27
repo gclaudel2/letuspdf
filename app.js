@@ -2540,9 +2540,10 @@ $('#fFav').onchange=async e=>{
 };
 /* the page-wide bar shown after an image was placed for "every page" */
 function showAllBar(a){
-  IM.aid=a.id;const b=$('#allBar');b.hidden=false;
+  IM.aid=a.id;const b=$('#allBar');b.hidden=false;document.documentElement.classList.add('allbar');
+  const an=S.annots.find(x=>x.id===a.id);if(an)setTimeout(()=>centerAnn(an),60);
 }
-function hideAllBar(){IM.aid=null;$('#allBar').hidden=true}
+function hideAllBar(){IM.aid=null;$('#allBar').hidden=true;document.documentElement.classList.remove('allbar')}
 function applyAllPages(){
   const a=S.annots.find(x=>x.id===IM.aid);
   if(!a){hideAllBar();return}
@@ -3694,7 +3695,7 @@ if(PWA){
 
 /* ---------- phone layout: header, bottom tool bar and "Plus" sheet (installed web app, small touch screen) ---------- */
 if(PWA){
-  const APP_VER='v31';
+  const APP_VER='v32';
   const root=document.documentElement,mq=matchMedia('(pointer:coarse) and (max-width:700px),(pointer:coarse) and (max-height:500px)');
   const setPhone=()=>root.classList.toggle('phone',mq.matches);
   setPhone();(mq.addEventListener?mq.addEventListener('change',setPhone):mq.addListener(setPhone));
